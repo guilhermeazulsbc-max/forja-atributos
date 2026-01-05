@@ -159,7 +159,7 @@
                     <div id="status-badge"></div>
                 </div>
                 <div id="xml-viewer" class="flex-1 overflow-auto p-6 font-mono text-xs leading-relaxed">
-                    <div id="batch-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div id="batch-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                         <div class="col-span-full text-slate-400 flex flex-col items-center justify-center h-full text-center py-20">
                             <p class="max-w-xs">Arraste um lote de XMLs para processamento em massa.</p>
                         </div>
@@ -220,8 +220,9 @@
             refreshUI();
             
             if (batchData.length > 0) {
-                batchSelector.value = batchData.length - 1;
-                loadFromBatch(batchData.length - 1);
+                const lastIndex = batchData.length - 1;
+                batchSelector.value = lastIndex;
+                loadFromBatch(lastIndex);
                 switchTab('tab-cadastro');
             }
         }
@@ -322,21 +323,26 @@
             if (batchData.length === 0) {
                 xmlViewer.innerHTML = `
                     <div class="col-span-full text-slate-400 flex flex-col items-center justify-center h-full text-center py-20">
-                        <p class="max-w-xs">Nenhum arquivo no lote atual.</p>
+                        <p class="max-w-xs">Arraste um lote de XMLs para processamento em massa.</p>
                     </div>`;
                 return;
             }
 
             const grid = document.createElement('div');
+            grid.id = "batch-list-container";
             grid.className = "grid grid-cols-1 md:grid-cols-2 gap-4 w-full";
             
             batchData.forEach((data, index) => {
                 const card = document.createElement('div');
                 card.className = "group relative p-4 bg-white border border-slate-200 rounded-xl hover:border-blue-400 cursor-pointer transition-all shadow-sm hover:shadow-md";
-                card.onclick = () => { batchSelector.value = index; loadFromBatch(index); switchTab('tab-cadastro'); };
+                card.onclick = () => { 
+                    batchSelector.value = index; 
+                    loadFromBatch(index); 
+                    switchTab('tab-cadastro'); 
+                };
                 
                 card.innerHTML = `
-                    <button onclick="removeFileByIndex(event, ${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" title="Excluir">
+                    <button onclick="removeFileByIndex(event, ${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-20" title="Excluir">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -372,6 +378,8 @@
                 const nextIndex = Math.max(0, index - 1);
                 batchSelector.value = nextIndex;
                 loadFromBatch(nextIndex);
+            } else {
+                resetFields();
             }
             showToast(`Arquivo removido: ${removedName}`);
         }
@@ -382,6 +390,7 @@
             transportadoraField.value = '';
             quickResults.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Aguardando seleção...</p>';
             outputGerador.value = '';
+            batchSelector.innerHTML = '<option value="">Nenhum arquivo</option>';
         }
 
         function loadFromBatch(index) {

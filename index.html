@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forja de Atributos - Sistema de Gestão de Tags</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .xml-node { transition: all 0.2s; border-radius: 4px; }
+        .xml-node:hover { background-color: rgba(59, 130, 246, 0.05); }
+        .tag-name { color: #be185d; }
+        .attr-name { color: #7c3aed; }
+        .attr-value { color: #059669; }
+        .highlight-value { color: #2563eb; font-weight: 700; background: #eff6ff; padding: 2px 4px; border-radius: 4px; }
+        
+        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 700; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .copy-toast {
+            visibility: hidden;
+            min-width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 12px;
+            position: fixed;
+            z-index: 100;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+        }
+        .copy-toast.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+    <div id="toast" class="copy-toast">Copiado para a área de transferência!</div>
+
+    <nav class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <h1 class="text-xl font-bold text-slate-800">Forja de <span class="text-blue-600">Atributos</span></h1>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="resetApp()" class="text-sm font-medium text-slate-500 hover:text-slate-800">Resetar Sistema</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <div class="lg:col-span-4 space-y-6">
+            <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="flex border-b border-slate-100 bg-slate-50">
+                    <button onclick="switchTab('tab-upload')" id="btn-tab-upload" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:bg-white transition-all tab-active">Upload</button>
+                    <button onclick="switchTab('tab-cadastro')" id="btn-tab-cadastro" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:bg-white transition-all">Entidades</button>
+                    <button onclick="switchTab('tab-caminhos')" id="btn-tab-caminhos" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:bg-white transition-all">Tags</button>
+                    <button onclick="switchTab('tab-gerador')" id="btn-tab-gerador" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:bg-white transition-all">Gerador</button>
+                </div>
+
+                <div class="p-6">
+                    <div id="tab-upload" class="tab-content active space-y-4">
+                        <h2 class="text-sm font-bold text-slate-700">Importação de XML (Lote)</h2>
+                        <div id="drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer bg-slate-50">
+                            <input type="file" id="file-input" class="hidden" accept=".xml" multiple>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 mx-auto text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <p class="text-sm text-slate-600 font-medium">Solte múltiplos ficheiros aqui</p>
+                            <p class="text-[10px] text-slate-400 mt-2">Suporta 10+ arquivos simultaneamente</p>
+                        </div>
+                    </div>
+
+                    <div id="tab-cadastro" class="tab-content space-y-4">
+                        <h2 class="text-sm font-bold text-slate-700">Gestão de Lote</h2>
+                        <div class="space-y-4">
+                            <div class="p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                                <label class="block text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-2">Visualizar Detalhes do Arquivo:</label>
+                                <div class="flex gap-2">
+                                    <select id="batch-selector" onchange="loadFromBatch(this.value)" class="flex-1 bg-white border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-800 font-semibold focus:outline-none">
+                                        <option value="">Nenhum arquivo</option>
+                                    </select>
+                                    <button onclick="removeSelectedFile()" title="Remover este arquivo do lote" class="bg-red-50 text-red-500 p-2 rounded-lg border border-red-200 hover:bg-red-500 hover:text-white transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4 pt-2 border-t border-slate-100">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Chave de Acesso (ID)</label>
+                                    <input type="text" id="input-chave" readonly class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[10px] font-mono text-slate-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Embarcador (xNome)</label>
+                                    <input type="text" id="input-embarcador" readonly class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Transportadora (xNome)</label>
+                                    <input type="text" id="input-transportadora" readonly class="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 outline-none">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-caminhos" class="tab-content space-y-4">
+                        <h2 class="text-sm font-bold text-slate-700">Mapeamento Logístico</h2>
+                        <p class="text-[9px] text-slate-400 mb-2 italic">Exibindo dados do arquivo selecionado acima.</p>
+                        <div id="quick-results" class="space-y-3">
+                            <p class="text-xs text-slate-400 text-center py-4">Aguardando seleção...</p>
+                        </div>
+                    </div>
+
+                    <div id="tab-gerador" class="tab-content space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-sm font-bold text-slate-700 uppercase tracking-tight">Exportação do Lote</h2>
+                        </div>
+                        
+                        <div class="flex">
+                            <button onclick="exportToExcel()" class="w-full text-[10px] bg-emerald-600 text-white px-3 py-3 rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-2 font-bold shadow-sm transition-all">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Exportar Lote (Excel)
+                            </button>
+                        </div>
+
+                        <div class="relative">
+                            <textarea id="output-gerador" readonly rows="13" class="w-full bg-slate-900 text-green-400 font-mono text-[11px] p-4 rounded-xl border border-slate-700 focus:outline-none resize-none leading-relaxed" placeholder="Aguardando processamento de lote..."></textarea>
+                        </div>
+                        <p class="text-[9px] text-slate-400 leading-tight">O Excel exportará apenas os arquivos ativos na base (visíveis ao lado).</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="lg:col-span-8">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[750px]">
+                <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <h2 class="text-sm font-bold text-slate-700 uppercase tracking-tight">Visualizador do Lote</h2>
+                    <div id="status-badge"></div>
+                </div>
+                <div id="xml-viewer" class="flex-1 overflow-auto p-6 font-mono text-xs leading-relaxed">
+                    <div id="batch-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="col-span-full text-slate-400 flex flex-col items-center justify-center h-full text-center py-20">
+                            <p class="max-w-xs">Arraste um lote de XMLs para processamento em massa.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let batchData = [];
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('[id^="btn-tab-"]').forEach(btn => btn.classList.remove('tab-active'));
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById('btn-' + tabId).classList.add('tab-active');
+        }
+
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const batchSelector = document.getElementById('batch-selector');
+        const xmlViewer = document.getElementById('xml-viewer');
+        const quickResults = document.getElementById('quick-results');
+        const statusBadge = document.getElementById('status-badge');
+        const outputGerador = document.getElementById('output-gerador');
+        const embarcadorField = document.getElementById('input-embarcador');
+        const transportadoraField = document.getElementById('input-transportadora');
+        const chaveField = document.getElementById('input-chave');
+
+        dropZone.onclick = () => fileInput.click();
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-blue-500', 'bg-blue-50'); };
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+            handleFiles(e.dataTransfer.files);
+        };
+        fileInput.onchange = (e) => { if (e.target.files.length > 0) handleFiles(e.target.files); };
+
+        async function handleFiles(files) {
+            statusBadge.innerHTML = `<span class="bg-amber-500 text-white px-3 py-1 rounded text-[10px] font-bold uppercase">Lendo Lote...</span>`;
+            
+            const promises = Array.from(files).map(file => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
+                        const data = parseSingleXML(file.name, xmlDoc);
+                        batchData.push(data);
+                        resolve();
+                    };
+                    reader.readAsText(file);
+                });
+            });
+
+            await Promise.all(promises);
+            refreshUI();
+            
+            if (batchData.length > 0) {
+                batchSelector.value = batchData.length - 1;
+                loadFromBatch(batchData.length - 1);
+                switchTab('tab-cadastro');
+            }
+        }
+
+        function parseSingleXML(filename, xmlDoc) {
+            const infCte = xmlDoc.getElementsByTagName("infCte")[0];
+            const chave = infCte ? (infCte.getAttribute("Id") || "").replace('CTe', '') : "N/A";
+            const remBlock = xmlDoc.getElementsByTagName("rem")[0];
+            const embarcador = remBlock?.getElementsByTagName("xNome")[0]?.textContent || "Não identificado";
+            const emitBlock = xmlDoc.getElementsByTagName("emit")[0];
+            const transportadora = emitBlock?.getElementsByTagName("xNome")[0]?.textContent || "Não identificado";
+
+            const mappings = [
+                { label: "TIPO DE OPERAÇÃO", paths: ["cteProc/CTe/infCte/compl/ObsCont?xCampo=OPERACAO", "cteProc/CTe/infCte/compl/ObsCont?xCampo=TipoOperacao", "cteProc/CTe/infCte/compl/xCaracSer"] },
+                { label: "TIPO DE VEÍCULO", paths: ["cteProc/CTe/infCte/compl/ObsCont?xCampo=COBRANCA", "cteProc/CTe/infCte/compl/ObsCont?xCampo=TipoVeiculo"] },
+                { label: "ORIGEM", paths: ["cteProc/CTe/infCte/ide/xMunIni"] },
+                { label: "DESTINO", paths: ["cteProc/CTe/infCte/ide/xMunFim"] },
+                { label: "FRETE PESO", paths: ['cteProc/CTe/infCte/vPrest/Comp?xNome=FRETE PESO'] },
+                { label: "GRIS", paths: ['cteProc/CTe/infCte/vPrest/Comp?xNome=GRIS'] },
+                { label: "PEDAGIO", paths: ['cteProc/CTe/infCte/vPrest/Comp?xNome=PEDAGIO', 'cteProc/CTe/infCte/vPrest/Comp?xNome=VALOR PEDAGIO'] }
+            ];
+
+            const results = mappings.map(m => {
+                let foundVal = "NÃO ENCONTRADO";
+                let usedPath = m.paths[0];
+                for (let p of m.paths) {
+                    let val = getValByPath(xmlDoc, p);
+                    if (val !== "NÃO ENCONTRADO" && val.trim() !== "") {
+                        foundVal = val;
+                        usedPath = p;
+                        break;
+                    }
+                }
+                return { label: m.label, value: foundVal, path: usedPath };
+            });
+
+            return { id: crypto.randomUUID(), filename, chave, embarcador, transportadora, results };
+        }
+
+        function getValByPath(xmlDoc, path) {
+            try {
+                if (path.includes('?')) {
+                    const [tagPart, query] = path.split('?');
+                    const [attrKey, attrVal] = query.split('=');
+                    const targetTagName = tagPart.split('/').pop();
+                    const elements = xmlDoc.getElementsByTagName(targetTagName);
+                    for (let el of elements) {
+                        if (el.getAttribute(attrKey) === attrVal) return extractContent(el);
+                        const subNodes = el.children;
+                        for (let sub of subNodes) {
+                            if (sub.tagName === attrKey && sub.textContent.trim().toUpperCase() === attrVal.toUpperCase()) return extractContent(el);
+                        }
+                    }
+                }
+                const tagName = path.split('/').pop();
+                const direct = xmlDoc.getElementsByTagName(tagName);
+                return direct.length > 0 ? direct[0].textContent.trim() : "NÃO ENCONTRADO";
+            } catch (e) { return "NÃO ENCONTRADO"; }
+        }
+
+        function extractContent(el) {
+            return el.getElementsByTagName("vComp")[0]?.textContent || el.getElementsByTagName("xTexto")[0]?.textContent || el.textContent || "NÃO ENCONTRADO";
+        }
+
+        function refreshUI() {
+            renderBatchSelector();
+            renderBatchCards();
+            updateGlobalOutput();
+            
+            const count = batchData.length;
+            statusBadge.innerHTML = count > 0 
+                ? `<span class="bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-bold uppercase">${count} Processados</span>`
+                : `<span class="bg-slate-400 text-white px-3 py-1 rounded text-[10px] font-bold uppercase">Vazio</span>`;
+            
+            if (count === 0) {
+                resetFields();
+            }
+        }
+
+        function renderBatchSelector() {
+            const currentVal = batchSelector.value;
+            batchSelector.innerHTML = batchData.length > 0 ? '' : '<option value="">Nenhum arquivo</option>';
+            
+            batchData.forEach((data, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${data.filename} (${data.chave.slice(-6)})`;
+                batchSelector.appendChild(option);
+            });
+
+            if (currentVal !== "" && batchData[currentVal]) {
+                batchSelector.value = currentVal;
+            }
+        }
+
+        function renderBatchCards() {
+            xmlViewer.innerHTML = '';
+            if (batchData.length === 0) {
+                xmlViewer.innerHTML = `
+                    <div class="col-span-full text-slate-400 flex flex-col items-center justify-center h-full text-center py-20">
+                        <p class="max-w-xs">Nenhum arquivo no lote atual.</p>
+                    </div>`;
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = "grid grid-cols-1 md:grid-cols-2 gap-4 w-full";
+            
+            batchData.forEach((data, index) => {
+                const card = document.createElement('div');
+                card.className = "group relative p-4 bg-white border border-slate-200 rounded-xl hover:border-blue-400 cursor-pointer transition-all shadow-sm hover:shadow-md";
+                card.onclick = () => { batchSelector.value = index; loadFromBatch(index); switchTab('tab-cadastro'); };
+                
+                card.innerHTML = `
+                    <button onclick="removeFileByIndex(event, ${index})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" title="Excluir">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] font-bold text-blue-600 truncate pr-4">${data.filename}</span>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="text-[10px] text-slate-400 font-mono">ID: ${data.chave.slice(0, 20)}...</div>
+                        <div class="text-[11px] text-slate-700 font-semibold truncate">${data.embarcador}</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            xmlViewer.appendChild(grid);
+        }
+
+        function removeSelectedFile() {
+            const index = batchSelector.value;
+            if (index === "" || !batchData[index]) {
+                showToast("Selecione um arquivo para excluir.");
+                return;
+            }
+            removeFileByIndex(null, parseInt(index));
+        }
+
+        function removeFileByIndex(event, index) {
+            if (event) event.stopPropagation();
+            const removedName = batchData[index].filename;
+            batchData.splice(index, 1);
+            refreshUI();
+            if (batchData.length > 0) {
+                const nextIndex = Math.max(0, index - 1);
+                batchSelector.value = nextIndex;
+                loadFromBatch(nextIndex);
+            }
+            showToast(`Arquivo removido: ${removedName}`);
+        }
+
+        function resetFields() {
+            chaveField.value = '';
+            embarcadorField.value = '';
+            transportadoraField.value = '';
+            quickResults.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Aguardando seleção...</p>';
+            outputGerador.value = '';
+        }
+
+        function loadFromBatch(index) {
+            if (index === "" || !batchData[index]) {
+                resetFields();
+                return;
+            }
+            const data = batchData[index];
+            chaveField.value = data.chave;
+            embarcadorField.value = data.embarcador;
+            transportadoraField.value = data.transportadora;
+            
+            quickResults.innerHTML = '';
+            data.results.slice(0, 4).forEach(res => {
+                const card = document.createElement('div');
+                card.className = "p-3 rounded-xl border bg-slate-50 border-slate-200";
+                card.innerHTML = `
+                    <div class="flex justify-between mb-1">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase">${res.label}</span>
+                        <span class="text-blue-600 font-bold text-[10px]">${res.value}</span>
+                    </div>
+                    <div class="text-[8px] font-mono text-slate-400 truncate">${res.path}</div>
+                `;
+                quickResults.appendChild(card);
+            });
+        }
+
+        function updateGlobalOutput() {
+            let fullText = "";
+            batchData.forEach(data => {
+                fullText += `--- ARQUIVO: ${data.filename} ---\n`;
+                data.results.forEach(res => {
+                    fullText += `${res.path}\n${res.value}\n`;
+                });
+                fullText += `\n`;
+            });
+            outputGerador.value = fullText.trim();
+        }
+
+        function exportToExcel() {
+            if (batchData.length === 0) {
+                showToast("Não há dados para exportar.");
+                return;
+            }
+
+            let csvContent = "\uFEFF"; 
+            const headers = ["Arquivo", "Chave de Acesso", "Embarcador", "Transportadora"];
+            
+            if (batchData[0].results.length > 0) {
+                batchData[0].results.forEach(res => headers.push(res.label));
+            }
+            
+            csvContent += headers.join(";") + "\n";
+
+            batchData.forEach(data => {
+                const row = [
+                    data.filename,
+                    data.chave,
+                    data.embarcador,
+                    data.transportadora
+                ];
+                
+                data.results.forEach(res => {
+                    let cleanedValue = String(res.value).replace(/[\r\n]/g, " ").replace(/;/g, ",");
+                    row.push(cleanedValue);
+                });
+                
+                csvContent += row.join(";") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            const timestamp = new Date().toISOString().slice(0,10);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Lote_Atributos_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast("Planilha gerada com sucesso!");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById("toast");
+            toast.textContent = msg;
+            toast.className = "copy-toast show";
+            setTimeout(() => { toast.className = "copy-toast"; }, 3000);
+        }
+
+        function resetApp() { 
+            if(confirm("Deseja realmente limpar todo o lote?")) {
+                location.reload(); 
+            }
+        }
+    </script>
+</body>
+</html>

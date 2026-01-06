@@ -3,145 +3,400 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forja de Atributos. - Sistema de Gestão de Tags</title>
+    <title>Forja de Atributos - TMS Moderno</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/unrar-js@0.2.2/lib/unrar.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 700; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .file-card { transition: all 0.2s ease; border-left: 4px solid transparent; }
-        .file-card:hover { transform: translateY(-2px); border-color: #3b82f6; border-left-width: 4px; }
-        .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 100; align-items: center; justify-content: center; flex-direction: column; }
-        .tag-path { font-family: 'Courier New', Courier, monospace; font-size: 10px; color: #94a3b8; word-break: break-all; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            overflow: hidden; 
+            background-color: #f8fafc;
+        }
+        
+        /* Estilo Scrollbar Customizada */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Abas e Conteúdo */
+        .tab-content { display: none; height: 100%; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: flex; flex-direction: column; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tab-active { 
+            background-color: rgba(59, 130, 246, 0.1); 
+            color: #ffffff; 
+            border-left: 4px solid #3b82f6; 
+        }
+
+        /* Sidebar Styling */
+        .sidebar-item { 
+            transition: all 0.3s; 
+            cursor: pointer; 
+            border-left: 4px solid transparent; 
+            margin: 4px 12px;
+            border-radius: 8px;
+            color: #94a3b8;
+        }
+        .sidebar-item:hover { 
+            background-color: rgba(255, 255, 255, 0.05); 
+            color: white; 
+        }
+        .sidebar-item.tab-active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left-color: #3b82f6;
+        }
+
+        /* Cards de Arquivos */
+        .file-card { 
+            transition: all 0.2s; 
+            border: 1px solid #e2e8f0; 
+            background: white;
+            border-radius: 12px;
+        }
+        .file-card:hover { 
+            border-color: #3b82f6; 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); 
+        }
+        .file-card.selected { 
+            border-color: #3b82f6; 
+            background-color: #f0f7ff; 
+            box-shadow: inset 0 0 0 1px #3b82f6;
+        }
+        .file-card.hidden-filter { display: none; }
+
+        /* Loading e Boas Vindas */
+        .loading-overlay { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(255, 255, 255, 0.9); 
+            z-index: 1000; 
+            align-items: center; 
+            justify-content: center; 
+            backdrop-filter: blur(8px); 
+        }
+        
+        #welcome-screen { 
+            position: fixed; 
+            inset: 0; 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+            z-index: 2000; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            flex-direction: column; 
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        #welcome-screen.fade-out { opacity: 0; pointer-events: none; transform: scale(1.1); }
+
+        .logo-container { cursor: pointer; }
+        
+        .tag-path { 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 10px; 
+            color: #64748b; 
+            background: #f1f5f9; 
+            padding: 4px 8px; 
+            border-radius: 6px; 
+        }
+
+        /* Inputs Modernos */
+        .modern-field {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-weight: 600;
+            color: #1e293b;
+            transition: all 0.2s;
+        }
+        .modern-field:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen">
+<body class="text-slate-900 h-screen flex" onclick="closeWelcome()">
 
-    <div id="loading" class="loading-overlay">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
-        <p id="loading-text" class="text-blue-600 font-bold">Processando arquivos...</p>
+    <!-- TELA DE BOAS VINDAS -->
+    <div id="welcome-screen">
+        <div class="relative mb-8">
+            <div class="absolute -inset-4 bg-blue-500 rounded-full blur-2xl opacity-20 animate-pulse"></div>
+            <div class="bg-blue-600 p-6 rounded-3xl text-white shadow-2xl relative">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            </div>
+        </div>
+        <h1 class="text-5xl font-extrabold text-white mb-3 tracking-tight">Forja de Atributos</h1>
+        <p class="text-blue-300 font-medium tracking-widest uppercase text-sm opacity-70">Clique para iniciar o processamento</p>
     </div>
 
-    <!-- Cabeçalho Simplificado -->
-    <nav class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-10 shadow-sm">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <div class="bg-blue-600 p-2 rounded-lg text-white shadow-lg shadow-blue-200">
+    <div id="loading" class="loading-overlay">
+        <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-blue-600 mb-4"></div>
+            <p class="text-slate-800 font-bold text-sm uppercase tracking-widest">Sincronizando Lote...</p>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="w-72 bg-[#0f172a] flex flex-col shrink-0 z-20">
+        <!-- Logo -->
+        <div class="p-8 mb-4 logo-container" onclick="openWelcome(event)">
+            <div class="flex items-center gap-4">
+                <div class="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-xl font-extrabold text-slate-800 leading-none">Forja de <span class="text-blue-600">Atributos.</span></h1>
+                    <h1 class="text-xl font-black text-white tracking-tighter leading-none">FORJA <span class="text-blue-500">TMS</span></h1>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sistema de Auditoria</span>
                 </div>
             </div>
-            <div id="engine-status" class="hidden"></div>
         </div>
-    </nav>
 
-    <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div class="lg:col-span-4 space-y-6">
-            <section class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-                <div class="flex border-b border-slate-100 bg-slate-50/50">
-                    <button onclick="switchTab('tab-upload')" id="btn-tab-upload" class="flex-1 py-4 text-[10px] font-black uppercase tracking-tighter text-slate-400 tab-active">1. Importar</button>
-                    <button onclick="switchTab('tab-cadastro')" id="btn-tab-cadastro" class="flex-1 py-4 text-[10px] font-black uppercase tracking-tighter text-slate-400">2. Dados</button>
-                    <button onclick="switchTab('tab-tags')" id="btn-tab-tags" class="flex-1 py-4 text-[10px] font-black uppercase tracking-tighter text-slate-400">3. Tag</button>
-                    <button onclick="switchTab('tab-gerador')" id="btn-tab-gerador" class="flex-1 py-4 text-[10px] font-black uppercase tracking-tighter text-slate-400">4. Exportar</button>
-                </div>
+        <!-- Busca Sidebar -->
+        <div class="px-6 mb-8">
+            <div class="relative">
+                <input type="text" id="sidebar-search" oninput="handleSearchInteraction()" placeholder="Buscar arquivos..." 
+                       class="w-full bg-slate-800/40 border border-slate-700/50 rounded-xl py-3 pl-11 pr-4 text-xs font-semibold text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition-all">
+                <svg class="w-4 h-4 absolute left-4 top-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+        </div>
 
-                <div class="p-8">
-                    <div id="tab-upload" class="tab-content active space-y-5">
-                        <div id="drop-zone" class="group border-2 border-dashed border-slate-200 rounded-3xl p-10 text-center hover:border-blue-400 hover:bg-blue-50/30 cursor-pointer transition-all duration-300">
+        <!-- Menu -->
+        <nav class="flex-1 space-y-1">
+            <div class="px-8 mb-3">
+                <span class="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Navegação</span>
+            </div>
+            <div onclick="switchTab('tab-upload')" id="btn-tab-upload" class="sidebar-item px-5 py-4 flex items-center gap-3.5 text-sm font-semibold tab-active">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Upload de Lote
+            </div>
+            <div onclick="switchTab('tab-cadastro')" id="btn-tab-cadastro" class="sidebar-item px-5 py-4 flex items-center gap-3.5 text-sm font-semibold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Dados Gerais
+            </div>
+            <div onclick="switchTab('tab-tags')" id="btn-tab-tags" class="sidebar-item px-5 py-4 flex items-center gap-3.5 text-sm font-semibold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 11h.01M7 15h.01M13 7h.01M13 11h.01M13 15h.01M17 7h.01M17 11h.01M17 15h.01"/></svg>
+                Explorador de Tags
+            </div>
+            <div onclick="switchTab('tab-gerador')" id="btn-tab-gerador" class="sidebar-item px-5 py-4 flex items-center gap-3.5 text-sm font-semibold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Exportar Lote
+            </div>
+        </nav>
+
+        <div class="p-6 border-t border-slate-800/50">
+            <button onclick="resetApp()" class="w-full py-3 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Resetar Sistema</button>
+        </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        
+        <!-- Header Superior -->
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10 shrink-0">
+            <div>
+                <h2 id="view-title" class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Painel Principal</h2>
+                <p id="view-subtitle" class="text-sm font-bold text-slate-800">Seja bem-vindo ao Forja TMS</p>
+            </div>
+            <div class="flex items-center gap-6">
+                <div id="status-badge" class="text-[10px] font-black bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full uppercase">Lote Vazio</div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-hidden flex">
+            
+            <div class="flex-1 overflow-auto p-10">
+                
+                <!-- TAB UPLOAD -->
+                <div id="tab-upload" class="tab-content active items-center justify-center">
+                    <div class="w-full max-w-2xl space-y-6">
+                        <div id="drop-zone" class="w-full border-2 border-dashed border-slate-200 rounded-[3rem] p-24 text-center hover:border-blue-400 hover:bg-blue-50/10 transition-all cursor-pointer bg-white shadow-sm">
                             <input type="file" id="file-input" class="hidden" accept=".xml,.zip,.rar" multiple>
-                            <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:bg-blue-100 transition-all">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                </svg>
+                            <div class="w-24 h-24 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
+                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                             </div>
-                            <p class="text-sm text-slate-600 font-bold">Arraste seus arquivos aqui</p>
+                            <h3 class="text-2xl font-extrabold text-slate-800 mb-2">Importar Arquivos</h3>
+                            <p class="text-slate-400 font-medium">Arraste seus arquivos XML, ZIP ou RAR para cá</p>
                         </div>
-                    </div>
-
-                    <div id="tab-cadastro" class="tab-content space-y-6">
-                        <div class="p-4 bg-blue-600 rounded-2xl shadow-lg">
-                            <label class="block text-[9px] font-black text-blue-100 uppercase mb-2">Selecionar do Lote:</label>
-                            <select id="batch-selector" onchange="loadFromBatch(this.value)" class="w-full bg-white border-none rounded-xl px-4 py-3 text-sm text-blue-900 font-bold focus:ring-2 focus:ring-blue-400 outline-none"></select>
-                        </div>
-                        <div class="grid grid-cols-1 gap-4">
-                            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                <label class="block text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest">Chave de Acesso</label>
-                                <input type="text" id="input-chave" readonly class="w-full bg-transparent border-none p-0 text-[11px] font-mono font-bold text-slate-600">
-                            </div>
-                            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                <label class="block text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest">Embarcador / Remetente</label>
-                                <input type="text" id="input-remetente" readonly class="w-full bg-transparent border-none p-0 text-sm font-bold text-slate-800">
-                            </div>
-                            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                <label class="block text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest">Transportadora / Emitente</label>
-                                <input type="text" id="input-emitente" readonly class="w-full bg-transparent border-none p-0 text-sm font-bold text-slate-800">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="tab-tags" class="tab-content space-y-4">
-                        <div id="quick-results" class="space-y-4">
-                            <div class="text-center py-10">
-                                <p class="text-sm text-slate-400">Selecione um arquivo para ver as tags.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="tab-gerador" class="tab-content space-y-4 text-center">
-                        <button onclick="exportToExcel()" class="w-full bg-emerald-600 text-white px-6 py-4 rounded-2xl hover:bg-emerald-700 shadow-lg font-black text-xs uppercase tracking-widest">Baixar CSV do Lote</button>
-                        <button onclick="resetApp()" class="w-full text-xs font-bold text-slate-400 hover:text-red-500 transition-colors uppercase py-2">Limpar Tudo</button>
                     </div>
                 </div>
-            </section>
-        </div>
 
-        <div class="lg:col-span-8">
-            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
-                <div class="px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                    <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest">Explorador de Lote</h2>
-                    <div id="status-badge" class="px-3 py-1 bg-white border border-slate-200 rounded-full text-[10px] font-black text-slate-400 uppercase">Vazio</div>
+                <!-- TAB CADASTRO/DADOS -->
+                <div id="tab-cadastro" class="tab-content">
+                    <div class="max-w-5xl w-full mx-auto space-y-8">
+                        <div class="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8">
+                            <div class="flex items-center gap-3">
+                                <div class="w-2 h-8 bg-blue-500 rounded-full"></div>
+                                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Informações do Documento</h3>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 gap-8">
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Chave de Acesso</label>
+                                    <input type="text" id="input-chave" readonly class="w-full modern-field bg-slate-50 font-mono text-sm tracking-tighter">
+                                </div>
+                                <div class="grid grid-cols-2 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Remetente</label>
+                                        <input type="text" id="input-remetente" readonly class="w-full modern-field bg-slate-50 text-sm">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Emitente</label>
+                                        <input type="text" id="input-emitente" readonly class="w-full modern-field bg-slate-50 text-sm">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex-1 overflow-auto p-8 bg-slate-50/30">
-                    <div id="batch-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-                    <div id="empty-state" class="flex flex-col items-center justify-center h-full text-slate-300">
-                        <p class="font-bold uppercase text-xs tracking-widest">Nenhum arquivo processado</p>
+
+                <!-- TAB TAGS -->
+                <div id="tab-tags" class="tab-content">
+                    <div id="quick-results" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="col-span-full text-center py-32">
+                            <div class="text-slate-200 mb-4 flex justify-center">
+                                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                            </div>
+                            <p class="text-slate-400 font-bold uppercase text-xs tracking-[0.2em]">Selecione um arquivo para auditar as tags</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB EXPORTAR (Aprimorada) -->
+                <div id="tab-gerador" class="tab-content items-center justify-center">
+                    <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
+                        
+                        <!-- Opção Relatório CSV -->
+                        <div class="bg-white p-12 rounded-[3.5rem] border border-slate-200 shadow-xl text-center group hover:border-emerald-300 transition-all">
+                            <div class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform">
+                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 00-4-4H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm10 0v-2a4 4 0 00-4-4h-1m1 4l2 2m0 0l2-2m-2 2v-5a2 2 0 012-2h2a2 2 0 012 2v7a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-3">Relatório Consolidado</h3>
+                            <p class="text-slate-500 text-xs font-medium mb-8 leading-relaxed">Gere uma folha de cálculo em CSV com todos os dados técnicos extraídos do lote.</p>
+                            <button onclick="exportToExcel()" class="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-900/10 transition-all">Baixar Relatório .CSV</button>
+                        </div>
+
+                        <!-- Opção Exportar XMLs -->
+                        <div class="bg-white p-12 rounded-[3.5rem] border border-slate-200 shadow-xl text-center group hover:border-blue-300 transition-all">
+                            <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform">
+                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            </div>
+                            <h3 class="text-xl font-extrabold text-slate-800 mb-3">Recuperar XMLs</h3>
+                            <p class="text-slate-500 text-xs font-medium mb-8 leading-relaxed">Descarregue os ficheiros originais processados compactados num ficheiro ZIP.</p>
+                            <button onclick="exportAllXmls()" class="w-full py-4 bg-[#0f172a] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 shadow-lg shadow-blue-900/10 transition-all">Baixar XMLs (.ZIP)</button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Listagem Lateral (Fila) -->
+            <div class="w-[26rem] bg-white border-l border-slate-200 flex flex-col shrink-0">
+                <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fila de Processamento</span>
+                    
+                    <button id="global-remove-btn" onclick="removeAllFiles()" class="hidden group flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        Limpar Lote
+                    </button>
+                </div>
+                <div id="batch-grid" class="flex-1 overflow-auto p-6 space-y-4">
+                    <div id="empty-state" class="text-center py-20">
+                        <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhum arquivo importado</p>
                     </div>
                 </div>
             </div>
+
         </div>
     </main>
 
     <script>
         let batchData = [];
+        let currentActiveTab = 'tab-upload';
+        let selectedIndex = -1;
+
         const fileInput = document.getElementById('file-input');
         const dropZone = document.getElementById('drop-zone');
-        const batchSelector = document.getElementById('batch-selector');
         const batchGrid = document.getElementById('batch-grid');
         const statusBadge = document.getElementById('status-badge');
         const loading = document.getElementById('loading');
         const emptyState = document.getElementById('empty-state');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const globalRemoveBtn = document.getElementById('global-remove-btn');
+
+        function closeWelcome() {
+            if (!welcomeScreen.classList.contains('fade-out')) {
+                welcomeScreen.classList.add('fade-out');
+                setTimeout(() => { welcomeScreen.style.display = 'none'; }, 600);
+            }
+        }
+
+        function openWelcome(event) {
+            event.stopPropagation();
+            welcomeScreen.style.display = 'flex';
+            setTimeout(() => { welcomeScreen.classList.remove('fade-out'); }, 10);
+        }
+
+        function handleSearchInteraction() {
+            const query = document.getElementById('sidebar-search').value.toLowerCase();
+            if (query.includes("export") || query.includes("csv") || query.includes("lote") || query.includes("xml")) switchTab('tab-gerador');
+            else if (query.includes("dado") || query.includes("cadastro")) switchTab('tab-cadastro');
+            else if (query.includes("tag") || query.includes("explorador")) switchTab('tab-tags');
+            else if (query.includes("upload") || query.includes("import")) switchTab('tab-upload');
+
+            const cards = document.querySelectorAll('.file-card');
+            cards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                card.classList.toggle('hidden-filter', !text.includes(query));
+            });
+        }
 
         function switchTab(tabId) {
+            closeWelcome();
+            currentActiveTab = tabId;
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('[id^="btn-tab-"]').forEach(btn => btn.classList.remove('tab-active'));
+            document.querySelectorAll('.sidebar-item').forEach(btn => btn.classList.remove('tab-active'));
+            
             document.getElementById(tabId).classList.add('active');
-            document.getElementById('btn-' + tabId).classList.add('tab-active');
+            const btn = document.getElementById('btn-' + tabId);
+            if(btn) btn.classList.add('tab-active');
+            
+            const titles = {
+                'tab-upload': ['Importação', 'Inicie o processamento de novos arquivos'],
+                'tab-cadastro': ['Dados Gerais', 'Informações estruturadas e consolidadas'],
+                'tab-tags': ['Tags Extraídas', 'Mapeamento técnico de campos XML'],
+                'tab-gerador': ['Exportar Lote', 'Descarregue relatórios ou ficheiros fiscais']
+            };
+            document.getElementById('view-title').innerText = titles[tabId][0];
+            document.getElementById('view-subtitle').innerText = titles[tabId][1];
         }
 
         dropZone.onclick = () => fileInput.click();
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-blue-400', 'bg-blue-50/30'); };
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-blue-400', 'bg-blue-50/10'); };
+        dropZone.ondragleave = (e) => { e.preventDefault(); dropZone.classList.remove('border-blue-400', 'bg-blue-50/10'); };
         dropZone.ondrop = (e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
         fileInput.onchange = (e) => { if (e.target.files.length > 0) handleFiles(e.target.files); };
 
         async function handleFiles(files) {
+            closeWelcome();
             loading.style.display = 'flex';
             for (const file of Array.from(files)) {
                 const ext = file.name.split('.').pop().toLowerCase();
@@ -152,6 +407,10 @@
                 } catch (e) { console.error(e); }
             }
             renderUI();
+            if (batchData.length > 0) {
+                if (selectedIndex === -1) loadFromBatch(0);
+                if (currentActiveTab === 'tab-upload') switchTab('tab-cadastro');
+            }
             loading.style.display = 'none';
         }
 
@@ -170,7 +429,7 @@
                                     if (extracted.state === "SUCCESS") {
                                         const text = new TextDecoder("utf-8").decode(extracted.files[0].extraction);
                                         const xmlDoc = new DOMParser().parseFromString(text, "text/xml");
-                                        batchData.push(parseXML(header.name.split('/').pop(), xmlDoc));
+                                        batchData.push(parseXML(header.name.split('/').pop(), xmlDoc, text));
                                     }
                                 }
                             }
@@ -189,7 +448,7 @@
                 if (path.toLowerCase().endsWith('.xml')) {
                     const text = await content.files[path].async("string");
                     const xmlDoc = new DOMParser().parseFromString(text, "text/xml");
-                    batchData.push(parseXML(path.split('/').pop(), xmlDoc));
+                    batchData.push(parseXML(path.split('/').pop(), xmlDoc, text));
                 }
             }
         }
@@ -198,15 +457,16 @@
             return new Promise(resolve => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const xmlDoc = new DOMParser().parseFromString(e.target.result, "text/xml");
-                    batchData.push(parseXML(file.name, xmlDoc));
+                    const text = e.target.result;
+                    const xmlDoc = new DOMParser().parseFromString(text, "text/xml");
+                    batchData.push(parseXML(file.name, xmlDoc, text));
                     resolve();
                 };
                 reader.readAsText(file);
             });
         }
 
-        function parseXML(filename, xml) {
+        function parseXML(filename, xml, rawText) {
             const getTagValue = (tagName) => {
                 const elements = xml.getElementsByTagNameNS ? xml.getElementsByTagNameNS("*", tagName) : xml.getElementsByTagName(tagName);
                 return elements.length > 0 ? elements[0].textContent : "N/A";
@@ -228,10 +488,8 @@
 
             const infCteElements = xml.getElementsByTagNameNS ? xml.getElementsByTagNameNS("*", "infCte") : xml.getElementsByTagName("infCte");
             const infNFeElements = xml.getElementsByTagNameNS ? xml.getElementsByTagNameNS("*", "infNFe") : xml.getElementsByTagName("infNFe");
-            
             const infCte = infCteElements[0];
             const infNFe = infNFeElements[0];
-            
             let chave = (infCte?.getAttribute("Id") || infNFe?.getAttribute("Id") || "").replace(/\D/g, '');
 
             const remElements = xml.getElementsByTagNameNS ? xml.getElementsByTagNameNS("*", "rem") : xml.getElementsByTagName("rem");
@@ -243,18 +501,115 @@
             const emitNome = emit ? (emit.getElementsByTagNameNS ? emit.getElementsByTagNameNS("*", "xNome")[0]?.textContent : emit.getElementsByTagName("xNome")[0]?.textContent) || "N/A" : "N/A";
 
             return {
+                id: crypto.randomUUID(),
                 filename,
                 chave,
                 remNome,
                 emitNome,
+                rawXml: rawText, // Armazena o XML original para exportação futura
                 results: [
-                    { label: "Número CTe", value: getTagValue("nCT"), path: "cteProc/CTe/infCte/ide/nCT" },
-                    { label: "Origem", value: getTagValue("xMunIni"), path: "cteProc/CTe/infCte/ide/xMunIni" },
-                    { label: "Destino", value: getTagValue("xMunFim"), path: "cteProc/CTe/infCte/ide/xMunFim" },
-                    { label: "Tipo de Veiculo", value: findObsContValue("TipoVeiculo"), path: "cteProc/CTe/infCte/compl/ObsCont?xCampo=TipoVeiculo" },
-                    { label: "Operação", value: findObsContValue("TipoOperacao"), path: "cteProc/CTe/infCte/compl/ObsCont?xCampo=TipoOperacao" }
+                    { label: "Número Doc", value: getTagValue("nCT") !== "N/A" ? getTagValue("nCT") : getTagValue("nNF"), path: "infCte/ide/nCT | infNFe/ide/nNF" },
+                    { label: "Município Origem", value: getTagValue("xMunIni"), path: "infCte/ide/xMunIni" },
+                    { label: "Município Destino", value: getTagValue("xMunFim"), path: "infCte/ide/xMunFim" },
+                    { label: "Tipo Veículo", value: findObsContValue("TipoVeiculo"), path: "ObsCont[@xCampo='TipoVeiculo']" },
+                    { label: "Operação", value: findObsContValue("TipoOperacao"), path: "ObsCont[@xCampo='TipoOperacao']" }
                 ]
             };
+        }
+
+        function loadFromBatch(index) {
+            selectedIndex = parseInt(index);
+            const data = batchData[selectedIndex];
+            if (!data) return;
+            
+            document.querySelectorAll('.file-card').forEach((c, i) => {
+                c.classList.toggle('selected', i == selectedIndex);
+            });
+
+            document.getElementById('input-chave').value = data.chave;
+            document.getElementById('input-remetente').value = data.remNome;
+            document.getElementById('input-emitente').value = data.emitNome;
+
+            const container = document.getElementById('quick-results');
+            container.innerHTML = '';
+            
+            data.results.forEach(res => {
+                const div = document.createElement('div');
+                div.className = "bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between group hover:border-blue-300 transition-all";
+                div.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${res.label}</span>
+                        <button onclick="copyTagPath('${res.path}')" class="text-slate-300 hover:text-blue-500 transition-colors">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        </button>
+                    </div>
+                    <div class="text-xl font-extrabold text-slate-800 mb-6 truncate">${res.value}</div>
+                    <div class="tag-path truncate">${res.path}</div>`;
+                container.appendChild(div);
+            });
+        }
+
+        function renderUI() {
+            batchGrid.innerHTML = '';
+            if (batchData.length === 0) {
+                emptyState.style.display = 'block';
+                globalRemoveBtn.classList.add('hidden');
+                statusBadge.innerText = `Lote Vazio`;
+                statusBadge.className = "text-[10px] font-black bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full uppercase";
+                
+                document.getElementById('input-chave').value = '';
+                document.getElementById('input-remetente').value = '';
+                document.getElementById('input-emitente').value = '';
+                document.getElementById('quick-results').innerHTML = `<div class="col-span-full text-center py-32"><p class="text-slate-400 font-bold uppercase text-xs tracking-[0.2em]">Importe arquivos para visualizar tags</p></div>`;
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            globalRemoveBtn.classList.remove('hidden');
+
+            batchData.forEach((item, i) => {
+                const card = document.createElement('div');
+                card.className = `file-card p-5 cursor-pointer ${i == selectedIndex ? 'selected' : ''}`;
+                card.onclick = () => loadFromBatch(i);
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <h4 class="text-[11px] font-black text-slate-800 truncate">${item.filename}</h4>
+                        <button onclick="removeFile('${item.id}', event)" class="text-slate-300 hover:text-red-500">
+                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate">${item.chave}</span>
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                            <span class="text-[9px] font-black text-blue-600 uppercase truncate">${item.emitNome}</span>
+                        </div>
+                    </div>`;
+                batchGrid.appendChild(card);
+            });
+            statusBadge.innerText = `${batchData.length} Processados`;
+            statusBadge.className = "text-[10px] font-black bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full uppercase";
+        }
+
+        function removeFile(id, event) {
+            if(event) event.stopPropagation();
+            batchData = batchData.filter(item => item.id !== id);
+            if (batchData.length === 0) {
+                selectedIndex = -1;
+            } else if (selectedIndex >= batchData.length) {
+                selectedIndex = batchData.length - 1;
+            }
+            renderUI();
+            if (batchData.length > 0) loadFromBatch(selectedIndex >= 0 ? selectedIndex : 0);
+        }
+
+        function removeAllFiles() {
+            if(confirm("Deseja remover todos os documentos deste lote?")) {
+                batchData = [];
+                selectedIndex = -1;
+                renderUI();
+                switchTab('tab-upload');
+            }
         }
 
         function copyTagPath(path) {
@@ -266,75 +621,39 @@
             document.body.removeChild(el);
         }
 
-        function loadFromBatch(index) {
-            const data = batchData[index];
-            if (!data) return;
-            
-            batchSelector.value = index;
-            document.getElementById('input-chave').value = data.chave;
-            document.getElementById('input-remetente').value = data.remNome;
-            document.getElementById('input-emitente').value = data.emitNome;
-
-            const container = document.getElementById('quick-results');
-            container.innerHTML = '';
-            
-            data.results.forEach(res => {
-                const div = document.createElement('div');
-                div.className = "p-5 bg-slate-50 border border-slate-100 rounded-3xl space-y-2 group hover:bg-white transition-all shadow-sm";
-                div.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${res.label}</span>
-                        <span class="text-sm font-black text-slate-800">${res.value}</span>
-                    </div>
-                    <div class="pt-2 border-t border-slate-100 flex flex-col gap-2">
-                        <span class="tag-path">${res.path}</span>
-                        <button onclick="copyTagPath('${res.path}')" class="flex items-center gap-1 text-[9px] font-bold text-blue-600 uppercase tracking-tighter self-start">
-                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                            Copiar Caminho
-                        </button>
-                    </div>`;
-                container.appendChild(div);
-            });
-        }
-
-        function renderUI() {
-            batchSelector.innerHTML = '';
-            batchGrid.innerHTML = '';
-            if (batchData.length === 0) {
-                emptyState.style.display = 'flex';
-                return;
-            }
-            emptyState.style.display = 'none';
-            batchData.forEach((item, i) => {
-                const opt = document.createElement('option');
-                opt.value = i; opt.textContent = item.filename;
-                batchSelector.appendChild(opt);
-                const card = document.createElement('div');
-                card.className = "file-card p-5 bg-white border border-slate-200 rounded-3xl cursor-pointer hover:shadow-lg transition-all";
-                card.onclick = () => { loadFromBatch(i); switchTab('tab-cadastro'); };
-                card.innerHTML = `<h3 class="text-xs font-black text-slate-800 truncate mb-1">${item.filename}</h3>
-                                  <p class="text-[9px] text-blue-500 font-bold truncate uppercase">Emit: ${item.emitNome}</p>
-                                  <p class="text-[9px] text-slate-400 font-bold truncate uppercase">Rem: ${item.remNome}</p>`;
-                batchGrid.appendChild(card);
-            });
-            statusBadge.innerText = `${batchData.length} XMLs`;
-            loadFromBatch(0);
-        }
-
         function exportToExcel() {
             if (batchData.length === 0) return;
-            // Atualizado para incluir o Número do CTe no CSV
-            let csv = "\uFEFFArquivo;CTe_Numero;Chave;Embarcador;Transportadora;Origem;Destino;TipoVeiculo;Operação\n";
+            let csv = "\uFEFFArquivo;Numero;Chave;Remetente;Emitente;Origem;Destino;TipoVeiculo;Operação\n";
             batchData.forEach(d => {
                 csv += `"${d.filename}";"${d.results[0].value}";"${d.chave}";"${d.remNome}";"${d.emitNome}";"${d.results[1].value}";"${d.results[2].value}";"${d.results[3].value}";"${d.results[4].value}"\n`;
             });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-            link.download = "relatorio_lote.csv";
+            link.download = `RELATORIO_FORJA_${new Date().getTime()}.csv`;
             link.click();
         }
 
-        function resetApp() { if(confirm("Limpar lote?")) location.reload(); }
+        async function exportAllXmls() {
+            if (batchData.length === 0) return;
+            loading.style.display = 'flex';
+            
+            const zip = new JSZip();
+            batchData.forEach(item => {
+                // Adiciona o XML original ao ZIP com o nome do arquivo original ou chave
+                const fileName = item.filename.toLowerCase().endsWith('.xml') ? item.filename : `${item.chave || item.id}.xml`;
+                zip.file(fileName, item.rawXml);
+            });
+
+            const content = await zip.generateAsync({ type: "blob" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(content);
+            link.download = `LOTE_XML_FORJA_${new Date().getTime()}.zip`;
+            link.click();
+            
+            loading.style.display = 'none';
+        }
+
+        function resetApp() { if(confirm("Deseja apagar todos os dados e reiniciar o sistema?")) location.reload(); }
     </script>
 </body>
 </html>

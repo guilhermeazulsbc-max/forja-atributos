@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forja de Atributos - TMS Moderno</title>
+    <title>Forja Atributo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/unrar-js@0.2.2/lib/unrar.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
         
@@ -16,13 +15,10 @@
             background-color: #f8fafc;
         }
         
-        /* Estilo Scrollbar Customizada */
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* Abas e Conteúdo */
         .tab-content { display: none; height: 100%; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: flex; flex-direction: column; }
         
@@ -31,13 +27,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .tab-active { 
-            background-color: rgba(59, 130, 246, 0.1); 
-            color: #ffffff; 
-            border-left: 4px solid #3b82f6; 
-        }
-
-        /* Sidebar Styling */
         .sidebar-item { 
             transition: all 0.3s; 
             cursor: pointer; 
@@ -46,614 +35,562 @@
             border-radius: 8px;
             color: #94a3b8;
         }
-        .sidebar-item:hover { 
-            background-color: rgba(255, 255, 255, 0.05); 
-            color: white; 
-        }
         .sidebar-item.tab-active {
             background-color: rgba(255, 255, 255, 0.1);
             color: white;
             border-left-color: #3b82f6;
         }
 
-        /* Cards de Arquivos */
         .file-card { 
             transition: all 0.2s; 
             border: 1px solid #e2e8f0; 
             background: white;
             border-radius: 12px;
-        }
-        .file-card:hover { 
-            border-color: #3b82f6; 
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); 
+            cursor: pointer;
+            position: relative;
         }
         .file-card.selected { 
             border-color: #3b82f6; 
             background-color: #f0f7ff; 
-            box-shadow: inset 0 0 0 1px #3b82f6;
         }
-        .file-card.hidden-filter { display: none; }
 
-        /* Loading e Boas Vindas */
-        .loading-overlay { 
-            display: none; 
-            position: fixed; 
-            inset: 0; 
-            background: rgba(255, 255, 255, 0.9); 
-            z-index: 1000; 
-            align-items: center; 
-            justify-content: center; 
-            backdrop-filter: blur(8px); 
+        .tag-card {
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 16px;
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 120px;
         }
-        
+        .tag-card:hover {
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+        }
+
+        .path-display {
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 9px;
+            background: #f1f5f9;
+            padding: 8px 10px;
+            border-radius: 6px;
+            color: #475569;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            margin-top: 10px;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .path-display:hover { 
+            background: #e2e8f0; 
+            border-color: #3b82f6;
+        }
+
         #welcome-screen { 
             position: fixed; 
             inset: 0; 
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+            background: #0f172a; 
             z-index: 2000; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             flex-direction: column; 
-            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); 
+            transition: opacity 0.6s ease;
         }
-        #welcome-screen.fade-out { opacity: 0; pointer-events: none; transform: scale(1.1); }
+        .fade-out { opacity: 0; pointer-events: none; }
 
-        .logo-container { cursor: pointer; }
-        
-        .tag-path { 
-            font-family: 'Courier New', Courier, monospace; 
-            font-size: 10px; 
-            color: #64748b; 
-            background: #f1f5f9; 
-            padding: 4px 8px; 
-            border-radius: 6px; 
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.8);
+            z-index: 3000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-direction: column;
         }
 
-        /* Inputs Modernos */
-        .modern-field {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 12px 16px;
-            font-weight: 600;
-            color: #1e293b;
-            transition: all 0.2s;
+        .btn-delete-file {
+            opacity: 0;
+            transition: opacity 0.2s;
         }
-        .modern-field:focus {
-            border-color: #3b82f6;
-            outline: none;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        .file-card:hover .btn-delete-file {
+            opacity: 1;
         }
     </style>
 </head>
 <body class="text-slate-900 h-screen flex" onclick="closeWelcome()">
 
-    <!-- TELA DE BOAS VINDAS -->
     <div id="welcome-screen">
-        <div class="relative mb-8">
-            <div class="absolute -inset-4 bg-blue-500 rounded-full blur-2xl opacity-20 animate-pulse"></div>
-            <div class="bg-blue-600 p-6 rounded-3xl text-white shadow-2xl relative">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-            </div>
+        <div class="bg-blue-600 p-6 rounded-3xl text-white shadow-2xl mb-6 flex items-center justify-center">
+            <!-- Logo Central -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
         </div>
-        <h1 class="text-5xl font-extrabold text-white mb-3 tracking-tight">Forja de Atributos</h1>
-        <p class="text-blue-300 font-medium tracking-widest uppercase text-sm opacity-70">Clique para iniciar o processamento</p>
+        <h1 class="text-4xl font-black text-white mb-2">FORJA ATRIBUTO</h1>
+        <p class="text-slate-400 uppercase tracking-widest text-xs">Clique para iniciar</p>
     </div>
 
-    <div id="loading" class="loading-overlay">
-        <div class="flex flex-col items-center">
-            <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-blue-600 mb-4"></div>
-            <p class="text-slate-800 font-bold text-sm uppercase tracking-widest">Sincronizando Lote...</p>
-        </div>
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p id="loading-text" class="text-sm font-bold uppercase tracking-widest">Processando...</p>
     </div>
 
-    <!-- SIDEBAR -->
     <aside class="w-72 bg-[#0f172a] flex flex-col shrink-0 z-20">
-        <!-- Logo -->
-        <div class="p-8 mb-4 logo-container" onclick="openWelcome(event)">
-            <div class="flex items-center gap-4">
-                <div class="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        <!-- Logo e Nome do Sistema no Menu Lateral -->
+        <div class="p-8 mb-4 cursor-pointer hover:opacity-80 transition-opacity" onclick="switchTab('tab-upload')">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
-                <div>
-                    <h1 class="text-xl font-black text-white tracking-tighter leading-none">FORJA <span class="text-blue-500">TMS</span></h1>
-                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sistema de Auditoria</span>
-                </div>
+                <h1 class="text-xl font-black text-white tracking-tighter">FORJA <span class="text-blue-500">ATRIBUTO</span></h1>
             </div>
+            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Auditoria Inteligente</p>
         </div>
 
-        <!-- Busca Sidebar -->
-        <div class="px-6 mb-8">
-            <div class="relative">
-                <input type="text" id="sidebar-search" oninput="handleSearchInteraction()" placeholder="Buscar arquivos..." 
-                       class="w-full bg-slate-800/40 border border-slate-700/50 rounded-xl py-3 pl-11 pr-4 text-xs font-semibold text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition-all">
-                <svg class="w-4 h-4 absolute left-4 top-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
-            </div>
-        </div>
-
-        <!-- Menu -->
         <nav class="flex-1 space-y-1">
-            <div class="px-8 mb-3">
-                <span class="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Navegação</span>
+            <div onclick="switchTab('tab-upload')" id="btn-tab-upload" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold tab-active">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Upload
             </div>
-            <div onclick="switchTab('tab-upload')" id="btn-tab-upload" class="sidebar-item px-5 py-4 flex items-center gap-3.5 text-sm font-semibold tab-active">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                Upload de Lote
+            <div onclick="switchTab('tab-info-xml')" id="btn-tab-info-xml" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Dados do XML
             </div>
-            <div onclick="switchTab('tab-cadastro')" id="btn-tab-cadastro" class="sidebar-item px-5 py-4 flex items-center gap-3.5 text-sm font-semibold">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                Dados Gerais
-            </div>
-            <div onclick="switchTab('tab-tags')" id="btn-tab-tags" class="sidebar-item px-5 py-4 flex items-center gap-3.5 text-sm font-semibold">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 11h.01M7 15h.01M13 7h.01M13 11h.01M13 15h.01M17 7h.01M17 11h.01M17 15h.01"/></svg>
+            <div onclick="switchTab('tab-tags')" id="btn-tab-tags" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 Explorador de Tags
             </div>
-            <div onclick="switchTab('tab-gerador')" id="btn-tab-gerador" class="sidebar-item px-5 py-4 flex items-center gap-3.5 text-sm font-semibold">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                Exportar Lote
+            <div onclick="switchTab('tab-gerador')" id="btn-tab-gerador" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Exportação
             </div>
         </nav>
-
-        <div class="p-6 border-t border-slate-800/50">
-            <button onclick="resetApp()" class="w-full py-3 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Resetar Sistema</button>
-        </div>
     </aside>
 
-    <!-- ÁREA PRINCIPAL -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
-        
-        <!-- Header Superior -->
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10 shrink-0">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10">
             <div>
-                <h2 id="view-title" class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Painel Principal</h2>
-                <p id="view-subtitle" class="text-sm font-bold text-slate-800">Seja bem-vindo ao Forja TMS</p>
+                <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest">Auditoria Universal</h2>
+                <p id="view-subtitle" class="text-sm font-bold text-slate-800">Caminhos estruturados para Tags</p>
             </div>
-            <div class="flex items-center gap-6">
-                <div id="status-badge" class="text-[10px] font-black bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full uppercase">Lote Vazio</div>
-            </div>
+            <div id="status-badge" class="bg-slate-100 text-slate-500 text-[10px] font-black px-4 py-2 rounded-full uppercase">Lote Vazio</div>
         </header>
 
         <div class="flex-1 overflow-hidden flex">
-            
-            <div class="flex-1 overflow-auto p-10">
+            <div class="flex-1 overflow-auto p-8">
                 
-                <!-- TAB UPLOAD -->
                 <div id="tab-upload" class="tab-content active items-center justify-center">
-                    <div class="w-full max-w-2xl space-y-6">
-                        <div id="drop-zone" class="w-full border-2 border-dashed border-slate-200 rounded-[3rem] p-24 text-center hover:border-blue-400 hover:bg-blue-50/10 transition-all cursor-pointer bg-white shadow-sm">
-                            <input type="file" id="file-input" class="hidden" accept=".xml,.zip,.rar" multiple>
-                            <div class="w-24 h-24 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
-                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                            </div>
-                            <h3 class="text-2xl font-extrabold text-slate-800 mb-2">Importar Arquivos</h3>
-                            <p class="text-slate-400 font-medium">Arraste seus arquivos XML, ZIP ou RAR para cá</p>
+                    <div id="drop-zone" class="w-full max-w-xl border-2 border-dashed border-slate-200 rounded-[2.5rem] p-20 text-center hover:border-blue-400 transition-all cursor-pointer bg-white">
+                        <input type="file" id="file-input" class="hidden" accept=".xml,.zip" multiple>
+                        <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
                         </div>
+                        <h3 class="text-xl font-bold text-slate-800">Arraste seu XML ou ZIP</h3>
+                        <p class="text-slate-400 text-sm mt-2">Clique ou solte arquivos individuais ou pastas compactadas</p>
                     </div>
                 </div>
 
-                <!-- TAB CADASTRO/DADOS -->
-                <div id="tab-cadastro" class="tab-content">
-                    <div class="max-w-5xl w-full mx-auto space-y-8">
-                        <div class="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8">
-                            <div class="flex items-center gap-3">
-                                <div class="w-2 h-8 bg-blue-500 rounded-full"></div>
-                                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Informações do Documento</h3>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 gap-8">
-                                <div class="space-y-2">
-                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Chave de Acesso</label>
-                                    <input type="text" id="input-chave" readonly class="w-full modern-field bg-slate-50 font-mono text-sm tracking-tighter">
-                                </div>
-                                <div class="grid grid-cols-2 gap-6">
-                                    <div class="space-y-2">
-                                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Remetente</label>
-                                        <input type="text" id="input-remetente" readonly class="w-full modern-field bg-slate-50 text-sm">
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Emitente</label>
-                                        <input type="text" id="input-emitente" readonly class="w-full modern-field bg-slate-50 text-sm">
-                                    </div>
-                                </div>
-                            </div>
+                <div id="tab-info-xml" class="tab-content">
+                    <div class="max-w-4xl mx-auto w-full">
+                        <div class="mb-8">
+                            <h3 class="text-xl font-black text-slate-800">Principais Agentes</h3>
+                            <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Identificação de Embarcador e Transportador</p>
                         </div>
-                    </div>
-                </div>
-
-                <!-- TAB TAGS -->
-                <div id="tab-tags" class="tab-content">
-                    <div id="quick-results" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="col-span-full text-center py-32">
-                            <div class="text-slate-200 mb-4 flex justify-center">
-                                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-                            </div>
-                            <p class="text-slate-400 font-bold uppercase text-xs tracking-[0.2em]">Selecione um arquivo para auditar as tags</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB EXPORTAR (Aprimorada) -->
-                <div id="tab-gerador" class="tab-content items-center justify-center">
-                    <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
                         
-                        <!-- Opção Relatório CSV -->
-                        <div class="bg-white p-12 rounded-[3.5rem] border border-slate-200 shadow-xl text-center group hover:border-emerald-300 transition-all">
-                            <div class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform">
-                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 00-4-4H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm10 0v-2a4 4 0 00-4-4h-1m1 4l2 2m0 0l2-2m-2 2v-5a2 2 0 012-2h2a2 2 0 012 2v7a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        <div id="xml-data-display" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm border-l-4 border-l-blue-500">
+                                <div class="flex items-center gap-3 mb-4 text-blue-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                                    <span class="text-[10px] font-black uppercase tracking-widest">Embarcador (Remetente)</span>
+                                </div>
+                                <h4 id="display-rem-nome" class="text-lg font-bold text-slate-800 mb-1">Aguardando arquivo...</h4>
+                                <p id="display-rem-cnpj" class="text-sm font-medium text-slate-500">CNPJ: ---</p>
                             </div>
-                            <h3 class="text-xl font-extrabold text-slate-800 mb-3">Relatório Consolidado</h3>
-                            <p class="text-slate-500 text-xs font-medium mb-8 leading-relaxed">Gere uma folha de cálculo em CSV com todos os dados técnicos extraídos do lote.</p>
-                            <button onclick="exportToExcel()" class="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-900/10 transition-all">Baixar Relatório .CSV</button>
-                        </div>
 
-                        <!-- Opção Exportar XMLs -->
-                        <div class="bg-white p-12 rounded-[3.5rem] border border-slate-200 shadow-xl text-center group hover:border-blue-300 transition-all">
-                            <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform">
-                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <div class="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm border-l-4 border-l-emerald-500">
+                                <div class="flex items-center gap-3 mb-4 text-emerald-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path></svg>
+                                    <span class="text-[10px] font-black uppercase tracking-widest">Transportador (Emitente)</span>
+                                </div>
+                                <h4 id="display-emi-nome" class="text-lg font-bold text-slate-800 mb-1">Aguardando arquivo...</h4>
+                                <p id="display-emi-cnpj" class="text-sm font-medium text-slate-500">CNPJ: ---</p>
                             </div>
-                            <h3 class="text-xl font-extrabold text-slate-800 mb-3">Recuperar XMLs</h3>
-                            <p class="text-slate-500 text-xs font-medium mb-8 leading-relaxed">Descarregue os ficheiros originais processados compactados num ficheiro ZIP.</p>
-                            <button onclick="exportAllXmls()" class="w-full py-4 bg-[#0f172a] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 shadow-lg shadow-blue-900/10 transition-all">Baixar XMLs (.ZIP)</button>
                         </div>
-
                     </div>
                 </div>
 
-            </div>
-
-            <!-- Listagem Lateral (Fila) -->
-            <div class="w-[26rem] bg-white border-l border-slate-200 flex flex-col shrink-0">
-                <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fila de Processamento</span>
-                    
-                    <button id="global-remove-btn" onclick="removeAllFiles()" class="hidden group flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        Limpar Lote
-                    </button>
+                <div id="tab-tags" class="tab-content">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="tags-grid"></div>
                 </div>
-                <div id="batch-grid" class="flex-1 overflow-auto p-6 space-y-4">
-                    <div id="empty-state" class="text-center py-20">
-                        <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhum arquivo importado</p>
+
+                <div id="tab-gerador" class="tab-content items-center justify-center">
+                    <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-xl w-full max-w-lg">
+                        <h3 class="text-2xl font-black text-slate-800 mb-6 text-center">Opções de Exportação</h3>
+                        <div class="space-y-4">
+                            <div class="p-5 border border-slate-100 rounded-2xl hover:border-emerald-200 hover:bg-emerald-50 transition-all cursor-pointer group" onclick="exportToCSV()">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-800">Consolidado CSV</h4>
+                                        <p class="text-xs text-slate-500">Planilha com todas as tags mapeadas do lote.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-5 border border-slate-100 rounded-2xl hover:border-blue-200 hover:bg-blue-50 transition-all cursor-pointer group" onclick="exportToZip()">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-800">Lote XML (ZIP)</h4>
+                                        <p class="text-xs text-slate-500">Compacta todos os arquivos XML originais em um ZIP.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="export-empty-msg" class="hidden mt-6 p-4 bg-amber-50 text-amber-700 text-xs font-bold rounded-xl text-center">
+                            Nenhum arquivo processado para exportar.
+                        </div>
                     </div>
                 </div>
             </div>
 
+            <div class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0">
+                <div class="p-6 border-b border-slate-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Arquivos no Lote</span>
+                        <button onclick="removeAll()" class="text-red-500 text-[10px] font-bold uppercase hover:underline">Limpar Tudo</button>
+                    </div>
+                    <div class="relative">
+                        <input type="text" id="search-files" oninput="renderBatchList()" placeholder="Procurar XML..." 
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                        <svg class="w-4 h-4 absolute right-3 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div id="batch-list" class="flex-1 overflow-auto p-4 space-y-3"></div>
+            </div>
         </div>
     </main>
 
     <script>
         let batchData = [];
-        let currentActiveTab = 'tab-upload';
         let selectedIndex = -1;
 
-        const fileInput = document.getElementById('file-input');
-        const dropZone = document.getElementById('drop-zone');
-        const batchGrid = document.getElementById('batch-grid');
-        const statusBadge = document.getElementById('status-badge');
-        const loading = document.getElementById('loading');
-        const emptyState = document.getElementById('empty-state');
-        const welcomeScreen = document.getElementById('welcome-screen');
-        const globalRemoveBtn = document.getElementById('global-remove-btn');
+        const MAP_RULES = [
+            { label: "Número CTe", keys: ["nCT", "nProt"], category: "ID" },
+            { label: "Tipo de Veículo", keys: [], priorityAttr: ["TipoVeiculo", "Tipo Veiculo", "TIPODEVICULO"], category: "FRO" },
+            { label: "Tipo de Operação", keys: ["xCaracSer", "caracSer"], priorityAttr: ["TipoOperacao", "Tipo Operacao", "OPERACAO", "FRACIONADO INBOUND"], fallbackKeys: ["natOp"], category: "FIS" },
+            { label: "Origem", keys: ["xMunIni", "xMunOri"], category: "LOG" },
+            { label: "Destino", keys: ["xMunFim", "xMunDest"], category: "LOG" },
+            { label: "FRETE PESO", keys: ["FRETE PESO", "PESO"], isComponent: true, category: "FIN" },
+            { label: "VALOR DA PRESTAÇÃO", keys: ["vTPrest", "vNF"], hidePath: true, category: "FIN" },
+            { label: "Embarcador Nome", parentTag: "rem", childTag: "xNome", internal: true },
+            { label: "Embarcador CNPJ", parentTag: "rem", childTag: "CNPJ", internal: true },
+            { label: "Transportador Nome", parentTag: "emit", childTag: "xNome", internal: true },
+            { label: "Transportador CNPJ", parentTag: "emit", childTag: "CNPJ", internal: true }
+        ];
+
+        function normalize(str) {
+            if (!str) return "";
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
+        }
 
         function closeWelcome() {
-            if (!welcomeScreen.classList.contains('fade-out')) {
-                welcomeScreen.classList.add('fade-out');
-                setTimeout(() => { welcomeScreen.style.display = 'none'; }, 600);
-            }
-        }
-
-        function openWelcome(event) {
-            event.stopPropagation();
-            welcomeScreen.style.display = 'flex';
-            setTimeout(() => { welcomeScreen.classList.remove('fade-out'); }, 10);
-        }
-
-        function handleSearchInteraction() {
-            const query = document.getElementById('sidebar-search').value.toLowerCase();
-            if (query.includes("export") || query.includes("csv") || query.includes("lote") || query.includes("xml")) switchTab('tab-gerador');
-            else if (query.includes("dado") || query.includes("cadastro")) switchTab('tab-cadastro');
-            else if (query.includes("tag") || query.includes("explorador")) switchTab('tab-tags');
-            else if (query.includes("upload") || query.includes("import")) switchTab('tab-upload');
-
-            const cards = document.querySelectorAll('.file-card');
-            cards.forEach(card => {
-                const text = card.innerText.toLowerCase();
-                card.classList.toggle('hidden-filter', !text.includes(query));
-            });
+            document.getElementById('welcome-screen').classList.add('fade-out');
         }
 
         function switchTab(tabId) {
-            closeWelcome();
-            currentActiveTab = tabId;
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.sidebar-item').forEach(btn => btn.classList.remove('tab-active'));
-            
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('tab-active'));
             document.getElementById(tabId).classList.add('active');
             const btn = document.getElementById('btn-' + tabId);
             if(btn) btn.classList.add('tab-active');
             
-            const titles = {
-                'tab-upload': ['Importação', 'Inicie o processamento de novos arquivos'],
-                'tab-cadastro': ['Dados Gerais', 'Informações estruturadas e consolidadas'],
-                'tab-tags': ['Tags Extraídas', 'Mapeamento técnico de campos XML'],
-                'tab-gerador': ['Exportar Lote', 'Descarregue relatórios ou ficheiros fiscais']
-            };
-            document.getElementById('view-title').innerText = titles[tabId][0];
-            document.getElementById('view-subtitle').innerText = titles[tabId][1];
+            if (tabId === 'tab-gerador') {
+                document.getElementById('export-empty-msg').classList.toggle('hidden', batchData.length > 0);
+            }
+            if (selectedIndex !== -1) selectFile(selectedIndex);
         }
+
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
 
         dropZone.onclick = () => fileInput.click();
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-blue-400', 'bg-blue-50/10'); };
-        dropZone.ondragleave = (e) => { e.preventDefault(); dropZone.classList.remove('border-blue-400', 'bg-blue-50/10'); };
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-blue-500'); };
         dropZone.ondrop = (e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
-        fileInput.onchange = (e) => { if (e.target.files.length > 0) handleFiles(e.target.files); };
+        fileInput.onchange = (e) => handleFiles(e.target.files);
 
         async function handleFiles(files) {
-            closeWelcome();
-            loading.style.display = 'flex';
-            for (const file of Array.from(files)) {
-                const ext = file.name.split('.').pop().toLowerCase();
-                try {
-                    if (ext === 'zip') await processZip(file);
-                    else if (ext === 'rar') await processRar(file);
-                    else if (ext === 'xml') await processXml(file);
-                } catch (e) { console.error(e); }
-            }
-            renderUI();
-            if (batchData.length > 0) {
-                if (selectedIndex === -1) loadFromBatch(0);
-                if (currentActiveTab === 'tab-upload') switchTab('tab-cadastro');
-            }
-            loading.style.display = 'none';
-        }
-
-        async function processRar(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    try {
-                        const buffer = new Uint8Array(e.target.result);
-                        const extractor = unrar.createExtractorFromData(buffer);
-                        const list = extractor.getFileList();
-                        if (list && list.state === "SUCCESS") {
-                            for (const header of list.arcHeader.fileHeaders) {
-                                if (header.name.toLowerCase().endsWith('.xml')) {
-                                    const extracted = extractor.extractFiles([header.name]);
-                                    if (extracted.state === "SUCCESS") {
-                                        const text = new TextDecoder("utf-8").decode(extracted.files[0].extraction);
-                                        const xmlDoc = new DOMParser().parseFromString(text, "text/xml");
-                                        batchData.push(parseXML(header.name.split('/').pop(), xmlDoc, text));
-                                    }
-                                }
-                            }
-                        }
-                    } catch (err) { console.error(err); }
-                    resolve();
-                };
-                reader.readAsArrayBuffer(file);
-            });
-        }
-
-        async function processZip(file) {
-            const zip = new JSZip();
-            const content = await zip.loadAsync(file);
-            for (const path of Object.keys(content.files)) {
-                if (path.toLowerCase().endsWith('.xml')) {
-                    const text = await content.files[path].async("string");
-                    const xmlDoc = new DOMParser().parseFromString(text, "text/xml");
-                    batchData.push(parseXML(path.split('/').pop(), xmlDoc, text));
-                }
-            }
-        }
-
-        async function processXml(file) {
-            return new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const text = e.target.result;
-                    const xmlDoc = new DOMParser().parseFromString(text, "text/xml");
-                    batchData.push(parseXML(file.name, xmlDoc, text));
-                    resolve();
-                };
-                reader.readAsText(file);
-            });
-        }
-
-        function parseXML(filename, xml, rawText) {
-            const getTagValue = (tagName) => {
-                const elements = xml.getElementsByTagNameNS ? xml.getElementsByTagNameNS("*", tagName) : xml.getElementsByTagName(tagName);
-                return elements.length > 0 ? elements[0].textContent : "N/A";
-            };
-
-            const findObsContValue = (campoNome) => {
-                const tagsParaTentar = ["obsCont", "ObsCont"];
-                for (let tag of tagsParaTentar) {
-                    const obsConts = xml.getElementsByTagNameNS ? xml.getElementsByTagNameNS("*", tag) : xml.getElementsByTagName(tag);
-                    for (let i = 0; i < obsConts.length; i++) {
-                        if (obsConts[i].getAttribute("xCampo") === campoNome) {
-                            const xTextos = obsConts[i].getElementsByTagNameNS ? obsConts[i].getElementsByTagNameNS("*", "xTexto") : obsConts[i].getElementsByTagName("xTexto");
-                            return xTextos.length > 0 ? xTextos[0].textContent : "N/A";
-                        }
+            loadingOverlay.style.display = 'flex';
+            loadingText.innerText = 'Processando arquivos...';
+            try {
+                for (const file of Array.from(files)) {
+                    if (file.name.toLowerCase().endsWith('.xml')) {
+                        const text = await file.text();
+                        processXMLText(file.name, text);
+                    } else if (file.name.toLowerCase().endsWith('.zip')) {
+                        await handleZipInput(file);
                     }
                 }
-                return "N/A";
-            };
-
-            const infCteElements = xml.getElementsByTagNameNS ? xml.getElementsByTagNameNS("*", "infCte") : xml.getElementsByTagName("infCte");
-            const infNFeElements = xml.getElementsByTagNameNS ? xml.getElementsByTagNameNS("*", "infNFe") : xml.getElementsByTagName("infNFe");
-            const infCte = infCteElements[0];
-            const infNFe = infNFeElements[0];
-            let chave = (infCte?.getAttribute("Id") || infNFe?.getAttribute("Id") || "").replace(/\D/g, '');
-
-            const remElements = xml.getElementsByTagNameNS ? xml.getElementsByTagNameNS("*", "rem") : xml.getElementsByTagName("rem");
-            const rem = remElements[0];
-            const remNome = rem ? (rem.getElementsByTagNameNS ? rem.getElementsByTagNameNS("*", "xNome")[0]?.textContent : rem.getElementsByTagName("xNome")[0]?.textContent) || "N/A" : "N/A";
-
-            const emitElements = xml.getElementsByTagNameNS ? xml.getElementsByTagNameNS("*", "emit") : xml.getElementsByTagName("emit");
-            const emit = emitElements[0];
-            const emitNome = emit ? (emit.getElementsByTagNameNS ? emit.getElementsByTagNameNS("*", "xNome")[0]?.textContent : emit.getElementsByTagName("xNome")[0]?.textContent) || "N/A" : "N/A";
-
-            return {
-                id: crypto.randomUUID(),
-                filename,
-                chave,
-                remNome,
-                emitNome,
-                rawXml: rawText, // Armazena o XML original para exportação futura
-                results: [
-                    { label: "Número Doc", value: getTagValue("nCT") !== "N/A" ? getTagValue("nCT") : getTagValue("nNF"), path: "infCte/ide/nCT | infNFe/ide/nNF" },
-                    { label: "Município Origem", value: getTagValue("xMunIni"), path: "infCte/ide/xMunIni" },
-                    { label: "Município Destino", value: getTagValue("xMunFim"), path: "infCte/ide/xMunFim" },
-                    { label: "Tipo Veículo", value: findObsContValue("TipoVeiculo"), path: "ObsCont[@xCampo='TipoVeiculo']" },
-                    { label: "Operação", value: findObsContValue("TipoOperacao"), path: "ObsCont[@xCampo='TipoOperacao']" }
-                ]
-            };
-        }
-
-        function loadFromBatch(index) {
-            selectedIndex = parseInt(index);
-            const data = batchData[selectedIndex];
-            if (!data) return;
-            
-            document.querySelectorAll('.file-card').forEach((c, i) => {
-                c.classList.toggle('selected', i == selectedIndex);
-            });
-
-            document.getElementById('input-chave').value = data.chave;
-            document.getElementById('input-remetente').value = data.remNome;
-            document.getElementById('input-emitente').value = data.emitNome;
-
-            const container = document.getElementById('quick-results');
-            container.innerHTML = '';
-            
-            data.results.forEach(res => {
-                const div = document.createElement('div');
-                div.className = "bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between group hover:border-blue-300 transition-all";
-                div.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${res.label}</span>
-                        <button onclick="copyTagPath('${res.path}')" class="text-slate-300 hover:text-blue-500 transition-colors">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                        </button>
-                    </div>
-                    <div class="text-xl font-extrabold text-slate-800 mb-6 truncate">${res.value}</div>
-                    <div class="tag-path truncate">${res.path}</div>`;
-                container.appendChild(div);
-            });
-        }
-
-        function renderUI() {
-            batchGrid.innerHTML = '';
-            if (batchData.length === 0) {
-                emptyState.style.display = 'block';
-                globalRemoveBtn.classList.add('hidden');
-                statusBadge.innerText = `Lote Vazio`;
-                statusBadge.className = "text-[10px] font-black bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full uppercase";
-                
-                document.getElementById('input-chave').value = '';
-                document.getElementById('input-remetente').value = '';
-                document.getElementById('input-emitente').value = '';
-                document.getElementById('quick-results').innerHTML = `<div class="col-span-full text-center py-32"><p class="text-slate-400 font-bold uppercase text-xs tracking-[0.2em]">Importe arquivos para visualizar tags</p></div>`;
-                return;
-            }
-            
-            emptyState.style.display = 'none';
-            globalRemoveBtn.classList.remove('hidden');
-
-            batchData.forEach((item, i) => {
-                const card = document.createElement('div');
-                card.className = `file-card p-5 cursor-pointer ${i == selectedIndex ? 'selected' : ''}`;
-                card.onclick = () => loadFromBatch(i);
-                card.innerHTML = `
-                    <div class="flex items-center justify-between gap-3 mb-2">
-                        <h4 class="text-[11px] font-black text-slate-800 truncate">${item.filename}</h4>
-                        <button onclick="removeFile('${item.id}', event)" class="text-slate-300 hover:text-red-500">
-                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate">${item.chave}</span>
-                        <div class="flex items-center gap-1.5">
-                            <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                            <span class="text-[9px] font-black text-blue-600 uppercase truncate">${item.emitNome}</span>
-                        </div>
-                    </div>`;
-                batchGrid.appendChild(card);
-            });
-            statusBadge.innerText = `${batchData.length} Processados`;
-            statusBadge.className = "text-[10px] font-black bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full uppercase";
-        }
-
-        function removeFile(id, event) {
-            if(event) event.stopPropagation();
-            batchData = batchData.filter(item => item.id !== id);
-            if (batchData.length === 0) {
-                selectedIndex = -1;
-            } else if (selectedIndex >= batchData.length) {
-                selectedIndex = batchData.length - 1;
-            }
-            renderUI();
-            if (batchData.length > 0) loadFromBatch(selectedIndex >= 0 ? selectedIndex : 0);
-        }
-
-        function removeAllFiles() {
-            if(confirm("Deseja remover todos os documentos deste lote?")) {
-                batchData = [];
-                selectedIndex = -1;
-                renderUI();
-                switchTab('tab-upload');
+                renderBatchList();
+                if (batchData.length > 0 && selectedIndex === -1) selectFile(0);
+                switchTab('tab-info-xml');
+            } catch (err) {
+                console.error("Erro ao processar arquivos:", err);
+            } finally {
+                loadingOverlay.style.display = 'none';
             }
         }
 
-        function copyTagPath(path) {
-            const el = document.createElement('textarea');
-            el.value = path;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-        }
-
-        function exportToExcel() {
-            if (batchData.length === 0) return;
-            let csv = "\uFEFFArquivo;Numero;Chave;Remetente;Emitente;Origem;Destino;TipoVeiculo;Operação\n";
-            batchData.forEach(d => {
-                csv += `"${d.filename}";"${d.results[0].value}";"${d.chave}";"${d.remNome}";"${d.emitNome}";"${d.results[1].value}";"${d.results[2].value}";"${d.results[3].value}";"${d.results[4].value}"\n`;
-            });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-            link.download = `RELATORIO_FORJA_${new Date().getTime()}.csv`;
-            link.click();
-        }
-
-        async function exportAllXmls() {
-            if (batchData.length === 0) return;
-            loading.style.display = 'flex';
-            
+        async function handleZipInput(file) {
             const zip = new JSZip();
-            batchData.forEach(item => {
-                // Adiciona o XML original ao ZIP com o nome do arquivo original ou chave
-                const fileName = item.filename.toLowerCase().endsWith('.xml') ? item.filename : `${item.chave || item.id}.xml`;
-                zip.file(fileName, item.rawXml);
-            });
-
-            const content = await zip.generateAsync({ type: "blob" });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(content);
-            link.download = `LOTE_XML_FORJA_${new Date().getTime()}.zip`;
-            link.click();
-            
-            loading.style.display = 'none';
+            const content = await zip.loadAsync(file);
+            const xmlFiles = Object.keys(content.files).filter(fileName => 
+                fileName.toLowerCase().endsWith('.xml') && !content.files[fileName].dir
+            );
+            for (const fileName of xmlFiles) {
+                const text = await content.files[fileName].async("string");
+                const baseName = fileName.split('/').pop();
+                processXMLText(baseName, text);
+            }
         }
 
-        function resetApp() { if(confirm("Deseja apagar todos os dados e reiniciar o sistema?")) location.reload(); }
+        function processXMLText(filename, text) {
+            const xmlDoc = new DOMParser().parseFromString(text, "text/xml");
+            if (xmlDoc.getElementsByTagName("parsererror").length > 0) return;
+            processAndStore(filename, xmlDoc, text);
+        }
+
+        function getFullXPath(node) {
+            if (!node || node.nodeType !== 1) return "Raiz";
+            let path = [];
+            let current = node;
+            while (current && current.nodeType === 1) {
+                let nodeName = current.localName || current.nodeName;
+                const cleanName = nodeName.split(':').pop();
+                const xCampo = current.getAttribute("xCampo");
+                let entry = cleanName;
+                if (xCampo) entry += `[xCampo='${xCampo}']`;
+                path.unshift(entry);
+                current = current.parentNode;
+            }
+            return path.join(" > ");
+        }
+
+        function smartFetch(xml, rule) {
+            const root = xml.documentElement;
+            if (rule.parentTag) {
+                const parents = Array.from(root.getElementsByTagNameNS("*", rule.parentTag));
+                if (parents.length > 0) {
+                    const child = Array.from(parents[0].getElementsByTagNameNS("*", rule.childTag));
+                    if (child.length > 0) return { value: child[0].textContent.trim(), path: getFullXPath(child[0]) };
+                }
+                return null;
+            }
+            if (rule.priorityAttr) {
+                const obsConts = Array.from(root.getElementsByTagNameNS("*", "ObsCont"));
+                const targetNorms = rule.priorityAttr.map(a => normalize(a));
+                for (let obs of obsConts) {
+                    const xCampo = obs.getAttribute("xCampo");
+                    if (xCampo && targetNorms.includes(normalize(xCampo))) {
+                        const xTextoNode = Array.from(obs.children).find(c => {
+                            const name = normalize(c.localName || c.nodeName);
+                            return name === "XTEXTO" || name.includes("TEXTO");
+                        });
+                        if (xTextoNode) return { value: xTextoNode.textContent.trim().replace(/\s+/g, ' '), path: getFullXPath(obs) + " > " + (xTextoNode.localName || xTextoNode.nodeName) };
+                    }
+                }
+            }
+            if (rule.isComponent) {
+                const targetNorms = rule.keys.map(k => normalize(k));
+                const xNomes = Array.from(root.getElementsByTagNameNS("*", "xNome"));
+                for (let xNomeNode of xNomes) {
+                    if (targetNorms.includes(normalize(xNomeNode.textContent))) {
+                        const vCompNode = Array.from(xNomeNode.parentNode.children).find(c => normalize(c.localName || c.nodeName).includes("VCOMP"));
+                        if (vCompNode) return { value: vCompNode.textContent.trim(), path: getFullXPath(vCompNode) };
+                    }
+                }
+            }
+            for (let key of rule.keys) {
+                const nodes = root.getElementsByTagNameNS("*", key);
+                if (nodes.length > 0) {
+                    const val = nodes[0].textContent.trim();
+                    if (val) return { value: val, path: getFullXPath(nodes[0]) };
+                }
+            }
+            if (rule.fallbackKeys) {
+                for (let fKey of rule.fallbackKeys) {
+                    const nodes = root.getElementsByTagNameNS("*", fKey);
+                    if (nodes.length > 0) return { value: nodes[0].textContent.trim(), path: getFullXPath(nodes[0]) };
+                }
+            }
+            return null;
+        }
+
+        function processAndStore(filename, xml, rawText) {
+            const results = MAP_RULES.map(rule => {
+                const found = smartFetch(xml, rule);
+                return {
+                    label: rule.label,
+                    value: found ? found.value : "NÃO LOCALIZADO",
+                    path: found ? found.path : "Tag não encontrada",
+                    hidePath: rule.hidePath || false,
+                    found: !!found,
+                    internal: rule.internal || false
+                };
+            });
+            batchData.push({ id: crypto.randomUUID(), filename, results, rawText });
+        }
+
+        function renderBatchList() {
+            const list = document.getElementById('batch-list');
+            const searchTerm = document.getElementById('search-files').value.toLowerCase();
+            list.innerHTML = '';
+            const filteredData = batchData.filter(f => f.filename.toLowerCase().includes(searchTerm));
+            filteredData.forEach((file) => {
+                const realIndex = batchData.findIndex(b => b.id === file.id);
+                const div = document.createElement('div');
+                div.className = `file-card p-4 group transition-all ${realIndex === selectedIndex ? 'selected border-blue-500 bg-blue-50' : ''}`;
+                div.onclick = () => selectFile(realIndex);
+                div.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <p class="text-[11px] font-bold text-slate-700 truncate pr-4">${file.filename}</p>
+                        <button onclick="event.stopPropagation(); removeFile('${file.id}')" 
+                                class="btn-delete-file p-1.5 hover:bg-red-100 text-red-400 hover:text-red-600 rounded-lg transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+            document.getElementById('status-badge').innerText = `${batchData.length} Arquivos`;
+        }
+
+        function removeFile(fileId) {
+            const indexToRemove = batchData.findIndex(f => f.id === fileId);
+            if (indexToRemove === -1) return;
+            batchData.splice(indexToRemove, 1);
+            if (selectedIndex === indexToRemove) {
+                selectedIndex = batchData.length > 0 ? 0 : -1;
+            } else if (selectedIndex > indexToRemove) {
+                selectedIndex--;
+            }
+            renderBatchList();
+            if (selectedIndex !== -1) selectFile(selectedIndex);
+            else { document.getElementById('tags-grid').innerHTML = ''; resetInfoDisplay(); }
+        }
+
+        function resetInfoDisplay() {
+            document.getElementById('display-rem-nome').innerText = "Aguardando arquivo...";
+            document.getElementById('display-rem-cnpj').innerText = "CNPJ: ---";
+            document.getElementById('display-emi-nome').innerText = "Aguardando arquivo...";
+            document.getElementById('display-emi-cnpj').innerText = "CNPJ: ---";
+        }
+
+        function selectFile(index) {
+            if (index < 0 || index >= batchData.length) return;
+            selectedIndex = index;
+            renderBatchList();
+            const file = batchData[index];
+            const remNome = file.results.find(r => r.label === "Embarcador Nome")?.value || "N/A";
+            const remCNPJ = file.results.find(r => r.label === "Embarcador CNPJ")?.value || "N/A";
+            const emiNome = file.results.find(r => r.label === "Transportador Nome")?.value || "N/A";
+            const emiCNPJ = file.results.find(r => r.label === "Transportador CNPJ")?.value || "N/A";
+            document.getElementById('display-rem-nome').innerText = remNome;
+            document.getElementById('display-rem-cnpj').innerText = `CNPJ: ${remCNPJ}`;
+            document.getElementById('display-emi-nome').innerText = emiNome;
+            document.getElementById('display-emi-cnpj').innerText = `CNPJ: ${emiCNPJ}`;
+            const grid = document.getElementById('tags-grid');
+            grid.innerHTML = '';
+            file.results.forEach(res => {
+                if (res.internal) return;
+                const card = document.createElement('div');
+                card.className = `tag-card ${!res.found ? 'bg-red-50 border-red-100' : ''}`;
+                card.innerHTML = `<div><div class="flex justify-between items-start mb-1"><span class="text-[9px] font-black text-blue-600 uppercase tracking-widest">${res.label}</span></div><p class="text-base font-bold text-slate-800 break-all">${res.value}</p></div>`;
+                if (!res.hidePath) {
+                    const pathDisplay = document.createElement('div');
+                    pathDisplay.className = 'path-display';
+                    pathDisplay.innerHTML = `<span class="truncate mr-2 text-slate-500 font-medium" title="${res.path}">${res.path}</span><span class="text-[7px] font-bold uppercase shrink-0 bg-white px-2 py-1 rounded shadow-sm hover:text-blue-600">Copiar</span>`;
+                    pathDisplay.onclick = () => copyToClipboard(res.path, pathDisplay);
+                    card.appendChild(pathDisplay);
+                }
+                grid.appendChild(card);
+            });
+        }
+
+        function copyToClipboard(text, el) {
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            const label = el.querySelector('span:last-child');
+            label.innerText = 'Copiado!';
+            setTimeout(() => label.innerText = 'Copiar', 1000);
+        }
+
+        function removeAll() {
+            batchData = []; selectedIndex = -1;
+            document.getElementById('search-files').value = '';
+            renderBatchList();
+            document.getElementById('tags-grid').innerHTML = '';
+            document.getElementById('status-badge').innerText = 'Lote Vazio';
+            resetInfoDisplay();
+        }
+
+        function exportToCSV() {
+            if (batchData.length === 0) return;
+            let csv = "\uFEFFArquivo;";
+            MAP_RULES.filter(r => !r.internal).forEach(r => csv += `${r.label};`);
+            csv += "\n";
+            batchData.forEach(f => {
+                csv += `"${f.filename}";`;
+                f.results.filter(res => !res.internal).forEach(res => csv += `"${res.value}";`);
+                csv += "\n";
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `auditoria_consolidada_${new Date().getTime()}.csv`;
+            link.click();
+        }
+
+        async function exportToZip() {
+            if (batchData.length === 0) return;
+            loadingOverlay.style.display = 'flex';
+            loadingText.innerText = 'Gerando ZIP...';
+            try {
+                const zip = new JSZip();
+                batchData.forEach(item => { zip.file(item.filename, item.rawText); });
+                const content = await zip.generateAsync({ type: "blob" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(content);
+                link.download = `lote_xmls_${new Date().getTime()}.zip`;
+                link.click();
+            } catch (err) { console.error("Erro ao gerar ZIP:", err); } 
+            finally { loadingOverlay.style.display = 'none'; }
+        }
     </script>
 </body>
 </html>

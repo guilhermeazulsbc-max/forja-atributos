@@ -18,8 +18,8 @@
         .sidebar-item.tab-active { background-color: rgba(255, 255, 255, 0.1); color: white; border-left-color: #3b82f6; }
         .file-card { transition: all 0.2s; border: 1px solid #e2e8f0; background: white; border-radius: 12px; cursor: pointer; position: relative; padding: 12px; }
         .file-card.selected { border-color: #3b82f6; background-color: #f0f7ff; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1); }
-        .tag-card { transition: all 0.2s; border: 1px solid #e2e8f0; background: white; border-radius: 16px; padding: 1.2rem; min-height: 100px; display: flex; flex-direction: column; justify-content: space-between; }
-        .path-display { font-family: monospace; font-size: 9px; background: #f1f5f9; padding: 8px; border-radius: 6px; margin-top: 10px; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center; font-weight: bold; }
+        .tag-card { transition: all 0.2s; border: 1px solid #e2e8f0; background: white; border-radius: 16px; padding: 1.2rem; min-height: 100px; display: flex; flex-direction: column; gap: 8px; }
+        .path-display { font-family: monospace; font-size: 8px; background: #f8fafc; color: #64748b; padding: 4px 8px; border-radius: 4px; border: 1px solid #f1f5f9; display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .loading-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); z-index: 9000; display: none; align-items: center; justify-content: center; color: white; flex-direction: column; }
         .sidebar-hidden { width: 0 !important; overflow: hidden; border-left: none !important; opacity: 0; }
         .btn-delete { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; background: #fee2e2; color: #ef4444; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; opacity: 0; transition: opacity 0.2s; z-index: 10; }
@@ -39,7 +39,7 @@
         <div class="mt-12 text-sm text-blue-500 font-bold animate-pulse">CLIQUE EM QUALQUER LUGAR PARA COMEÇAR</div>
     </div>
 
-    <!-- Overlay de Carregamento Otimizado -->
+    <!-- Overlay de Carregamento -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
         <p id="loading-text" class="text-sm font-bold uppercase tracking-widest text-center px-4">Iniciando...</p>
@@ -64,7 +64,7 @@
             <div onclick="switchTab('tab-gerador')" id="btn-tab-gerador" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold">Exportar</div>
         </nav>
         <div class="p-6 border-t border-slate-800">
-            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Versão 4.0 - Lotes Massivos (7k+)</p>
+            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Versão 4.1 - Auditoria de Tags</p>
         </div>
     </aside>
 
@@ -114,11 +114,11 @@
                         <div class="flex-1 max-w-lg">
                              <input type="text" id="tag-batch-search" oninput="renderTagsWithFilter()" placeholder="Pesquisar por CTe (ex: 890467)..." class="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
-                        <button onclick="exportFilteredTags()" class="ml-4 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md hover:bg-blue-700 transition-all flex items-center gap-2">
-                             <span>📄</span> EXPORTAR FILTRADOS
+                        <button onclick="exportToCSV()" class="ml-4 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md hover:bg-blue-700 transition-all flex items-center gap-2">
+                             <span>📄</span> EXPORTAR CSV
                         </button>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="tags-grid"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20" id="tags-grid"></div>
                 </div>
 
                 <!-- Aba Exportar -->
@@ -135,7 +135,7 @@
                 </div>
             </div>
 
-            <!-- Sidebar Direita Otimizada -->
+            <!-- Sidebar Direita -->
             <div id="batch-sidebar" class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 sidebar-hidden transition-all duration-300">
                 <div class="p-6 border-b border-slate-100 bg-slate-50/50">
                     <input type="text" id="search-files" oninput="debouncedRenderBatchList()" placeholder="Filtrar arquivos..." class="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs outline-none focus:ring-1 focus:ring-blue-500 shadow-sm">
@@ -150,17 +150,26 @@
         let selectedIndex = -1;
         let renderTimeout = null;
 
+        // Regras de Mapeamento com busca aprofundada
         const MAP_RULES = [
             { label: "Número CTe", keys: ["nCT", "nProt"] },
             { 
                 label: "Tipo de Operação", 
-                keys: ["xCaracSer", "caracSer", "xObs"],
-                priorityAttr: ["TipoOperacao", "Tipo De Operacao", "OPERACAO"],
-                fallbackKeys: ["natOp"]
+                keys: ["xCaracSer", "caracSer", "xObs", "TipoOperacao"],
+                priorityAttr: ["TipoOperacao", "Tipo De Operacao", "OPERACAO"]
             },
-            { label: "CFOP", keys: ["CFOP"] },
+            { 
+                label: "Tipo de Veículo", 
+                keys: ["TipoVeiculo", "xTipoVeiculo", "veicTipo"],
+                priorityAttr: ["TipoVeiculo", "TIPO_VEICULO", "VEICULO"]
+            },
+            { 
+                label: "Tipo de Cobrança", 
+                keys: ["TipoCobranca", "xTipoCobranca", "tpCobranca"],
+                priorityAttr: ["TipoCobranca", "TIPO_COBRANCA", "COBRANCA"]
+            },
             { label: "FRETE PESO", keys: ["FRETE PESO", "PESO"], isComponent: true },
-            { label: "VALOR TOTAL", keys: ["vTPrest", "vNF"], hidePath: true },
+            { label: "VALOR TOTAL", keys: ["vTPrest", "vNF"] },
             { label: "Rem Nome", parentTag: "rem", childTag: "xNome", internal: true },
             { label: "Rem CNPJ", parentTag: "rem", childTag: "CNPJ", internal: true },
             { label: "Emi Nome", parentTag: "emit", childTag: "xNome", internal: true },
@@ -180,7 +189,6 @@
 
         async function handleFiles(files) {
             const overlay = document.getElementById('loading-overlay');
-            const subText = document.getElementById('loading-subtext');
             overlay.style.display = 'flex';
             
             try {
@@ -198,25 +206,21 @@
                         );
 
                         const totalZipFiles = zipFiles.length;
-                        // Processamento em Chunks (Lotes) de 100 para não travar o browser
                         const chunkSize = 100;
                         for (let i = 0; i < totalZipFiles; i += chunkSize) {
                             const chunk = zipFiles.slice(i, i + chunkSize);
-                            
                             await Promise.all(chunk.map(async (filename) => {
                                 const text = await zip.files[filename].async("text");
                                 processXMLText(filename.split('/').pop(), text);
                             }));
-
                             updateProgress(Math.min(i + chunkSize, totalZipFiles), totalZipFiles);
-                            // Pequena pausa para o navegador "respirar" e atualizar a UI
-                            await new Promise(r => setTimeout(r, 10));
+                            await new Promise(r => setTimeout(r, 5));
                         }
                     }
                 }
             } catch (err) {
                 console.error(err);
-                alert("Erro ao processar lote. Verifique o arquivo ZIP.");
+                alert("Erro ao processar lote.");
             } finally {
                 updateSidebarVisibility();
                 debouncedRenderBatchList();
@@ -238,53 +242,75 @@
 
             const results = MAP_RULES.map(rule => {
                 let val = "N/A";
-                let path = "";
+                let path = "Não encontrado";
                 let found = false;
 
+                // 1. Busca em Observações (ObsCont)
                 if (rule.priorityAttr) {
                     const obsConts = xmlDoc.getElementsByTagNameNS("*", "ObsCont");
                     for (let obs of obsConts) {
                         const xCampo = obs.getAttribute("xCampo");
                         if (xCampo && rule.priorityAttr.some(t => normalize(t) === normalize(xCampo))) {
                             const xTexto = obs.getElementsByTagNameNS("*", "xTexto")[0] || obs.getElementsByTagNameNS("*", "xtexto")[0];
-                            if (xTexto) { val = xTexto.textContent.trim(); found = true; break; }
+                            if (xTexto) { 
+                                val = xTexto.textContent.trim(); 
+                                path = `infCte/compl/ObsCont[@xCampo='${xCampo}']/xTexto`;
+                                found = true; 
+                                break; 
+                            }
                         }
                     }
                 }
 
+                // 2. Busca em Componentes de Valor (Frete Peso)
                 if (!found && rule.isComponent) {
                     const xNomes = xmlDoc.getElementsByTagNameNS("*", "xNome");
                     for (let xNomeNode of xNomes) {
                         if (rule.keys.some(k => normalize(k) === normalize(xNomeNode.textContent))) {
                             const vCompNode = Array.from(xNomeNode.parentNode.children).find(c => c.localName.toLowerCase().includes("vcomp"));
-                            if (vCompNode) { val = vCompNode.textContent.trim(); found = true; break; }
+                            if (vCompNode) { 
+                                val = vCompNode.textContent.trim(); 
+                                path = `vPrest/Comp[xNome='${xNomeNode.textContent}']/vComp`;
+                                found = true; 
+                                break; 
+                            }
                         }
                     }
                 }
 
+                // 3. Busca direta por Tag
                 if (!found && rule.keys) {
                     for (let k of rule.keys) {
                         const node = xmlDoc.getElementsByTagNameNS("*", k)[0];
-                        if (node) { val = node.textContent.trim(); found = true; break; }
+                        if (node) { 
+                            val = node.textContent.trim(); 
+                            path = `<${node.localName}>`;
+                            found = true; 
+                            break; 
+                        }
                     }
                 }
 
+                // 4. Busca em estrutura pai-filho (Rem/Emit)
                 if (!found && rule.parentTag) {
                     const parent = xmlDoc.getElementsByTagNameNS("*", rule.parentTag)[0];
                     if (parent) {
                         const child = parent.getElementsByTagNameNS("*", rule.childTag)[0];
-                        if (child) { val = child.textContent.trim(); found = true; }
+                        if (child) { 
+                            val = child.textContent.trim(); 
+                            path = `${parent.localName}/${child.localName}`;
+                            found = true; 
+                        }
                     }
                 }
 
-                return { label: rule.label, value: val, internal: rule.internal || false };
+                return { label: rule.label, value: val, path: path, internal: rule.internal || false };
             });
 
             const nCT = results.find(r => r.label === "Número CTe")?.value || "S/N";
             batchData.push({ filename, nCT, results, xml_raw: text });
         }
 
-        // Função debounced para não travar ao digitar no filtro de 7 mil itens
         function debouncedRenderBatchList() {
             clearTimeout(renderTimeout);
             renderTimeout = setTimeout(renderBatchList, 300);
@@ -293,12 +319,9 @@
         function renderBatchList() {
             const list = document.getElementById('batch-list');
             const search = document.getElementById('search-files').value.toLowerCase();
-            
-            // DocumentFragment para performance de inserção massiva
             const fragment = document.createDocumentFragment();
             list.innerHTML = '';
             
-            // Filtro e limite de exibição na sidebar para performance (mostra os primeiros 200 matches)
             let count = 0;
             for (let i = 0; i < batchData.length; i++) {
                 const file = batchData[i];
@@ -313,7 +336,7 @@
                     `;
                     fragment.appendChild(div);
                     count++;
-                    if (count > 200) break; // Limite visual para não travar o browser
+                    if (count > 200) break;
                 }
             }
             list.appendChild(fragment);
@@ -331,28 +354,51 @@
             for (let i = 0; i < batchData.length; i++) {
                 const file = batchData[i];
                 if (!searchVal || file.nCT.includes(searchVal)) {
-                    const op = file.results.find(r => r.label === "Tipo de Operação")?.value || "N/A";
-                    const peso = file.results.find(r => r.label === "FRETE PESO")?.value || "0.00";
+                    
+                    const getField = (lbl) => file.results.find(r => r.label === lbl) || { value: 'N/A', path: '---' };
+                    
+                    const op = getField("Tipo de Operação");
+                    const veic = getField("Tipo de Veículo");
+                    const cob = getField("Tipo de Cobrança");
+                    const peso = getField("FRETE PESO");
                     
                     const div = document.createElement('div');
                     div.className = "tag-card border-l-4 border-l-blue-500 shadow-sm";
                     div.innerHTML = `
-                        <div>
-                            <div class="flex justify-between items-start">
-                                <span class="text-[9px] font-black text-blue-600 uppercase">CTe: ${file.nCT}</span>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] font-black text-blue-600 uppercase">CTe: ${file.nCT}</span>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-[9px] text-slate-400 font-black uppercase">Operação</p>
+                                <p class="text-xs font-bold text-slate-700 truncate">${op.value}</p>
+                                <span class="path-display">${op.path}</span>
                             </div>
-                            <div class="mt-2">
-                                <p class="text-[10px] text-slate-400 font-bold uppercase">Operação</p>
-                                <p class="text-sm font-bold text-slate-700 truncate">${op}</p>
+                            
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <p class="text-[9px] text-slate-400 font-black uppercase">Veículo</p>
+                                    <p class="text-xs font-bold text-slate-700 truncate">${veic.value}</p>
+                                    <span class="path-display">${veic.path}</span>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] text-slate-400 font-black uppercase">Cobrança</p>
+                                    <p class="text-xs font-bold text-slate-700 truncate">${cob.value}</p>
+                                    <span class="path-display">${cob.path}</span>
+                                </div>
                             </div>
-                            <div class="mt-2 border-t pt-2">
-                                <p class="text-[10px] text-slate-400 font-bold uppercase">Frete Peso</p>
-                                <p class="text-sm font-bold text-slate-700">R$ ${peso}</p>
+
+                            <div class="pt-2 border-t border-slate-100">
+                                <p class="text-[9px] text-slate-400 font-black uppercase">Frete Peso</p>
+                                <p class="text-xs font-bold text-blue-600">R$ ${peso.value}</p>
+                                <span class="path-display">${peso.path}</span>
                             </div>
-                        </div>`;
+                        </div>
+                    `;
                     fragment.appendChild(div);
                     count++;
-                    if (count > 100) break; // Limite de visualização para tags
+                    if (count > 100) break;
                 }
             }
             grid.appendChild(fragment);
@@ -393,15 +439,15 @@
 
         function exportToCSV() {
             if (batchData.length === 0) return;
-            let csv = "\uFEFFArquivo;CTe;Remetente;Emitente;Valor;Peso\n";
+            let csv = "\uFEFFArquivo;CTe;Remetente;Emitente;Operacao;Veiculo;Cobranca;Peso;Valor\n";
             batchData.forEach(f => {
                 const getVal = (lbl) => f.results.find(r => r.label === lbl)?.value || "N/A";
-                csv += `"${f.filename}";"${f.nCT}";"${getVal('Rem Nome')}";"${getVal('Emi Nome')}";"${getVal('VALOR TOTAL')}";"${getVal('FRETE PESO')}"\n`;
+                csv += `"${f.filename}";"${f.nCT}";"${getVal('Rem Nome')}";"${getVal('Emi Nome')}";"${getVal('Tipo de Operação')}";"${getVal('Tipo de Veículo')}";"${getVal('Tipo de Cobrança')}";"${getVal('FRETE PESO')}";"${getVal('VALOR TOTAL')}"\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = "export_massivo_forja.csv";
+            link.download = "auditoria_forja_completa.csv";
             link.click();
         }
 

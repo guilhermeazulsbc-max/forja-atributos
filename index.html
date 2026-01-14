@@ -21,7 +21,7 @@
         .file-card.selected { border-color: #3b82f6; background-color: #f0f7ff; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1); }
         .tag-card { transition: all 0.2s; border: 1px solid #e2e8f0; background: white; border-radius: 16px; padding: 1.2rem; min-height: 100px; display: flex; flex-direction: column; justify-content: space-between; }
         .path-display { font-family: monospace; font-size: 9px; background: #f1f5f9; padding: 8px; border-radius: 6px; margin-top: 10px; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center; font-weight: bold; }
-        .loading-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.9); z-index: 9000; display: none; align-items: center; justify-content: center; color: white; flex-direction: column; }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); z-index: 9000; display: none; align-items: center; justify-content: center; color: white; flex-direction: column; }
         .sidebar-hidden { width: 0 !important; overflow: hidden; border-left: none !important; opacity: 0; }
         .btn-delete { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; background: #fee2e2; color: #ef4444; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; opacity: 0; transition: opacity 0.2s; z-index: 10; }
         .file-card:hover .btn-delete { opacity: 1; }
@@ -40,7 +40,8 @@
 
     <div id="loading-overlay" class="loading-overlay">
         <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-        <p id="loading-text" class="text-sm font-bold uppercase tracking-widest">Processando Lote...</p>
+        <p id="loading-text" class="text-sm font-bold uppercase tracking-widest">Iniciando...</p>
+        <p id="loading-subtext" class="text-xs text-slate-400 mt-2">Aguarde, processando arquivos...</p>
     </div>
 
     <!-- Barra Lateral Esquerda -->
@@ -58,7 +59,7 @@
             <div onclick="switchTab('tab-gerador')" id="btn-tab-gerador" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold">Exportar</div>
         </nav>
         <div class="p-6 border-t border-slate-800">
-            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Versão 3.2 - Correção de Filtros</p>
+            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Versão 3.3 - ZIP Ilimitado</p>
         </div>
     </aside>
 
@@ -78,7 +79,7 @@
                         <input type="file" id="file-input" class="hidden" accept=".xml,.zip" multiple>
                         <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl">📥</div>
                         <h3 class="text-xl font-bold text-slate-800">Selecione XML ou ZIP</h3>
-                        <p class="text-slate-400 text-sm mt-2">Suporta múltiplos arquivos ou pastas compactadas.</p>
+                        <p class="text-slate-400 text-sm mt-2">Processamento robusto para grandes lotes.</p>
                     </div>
                 </div>
 
@@ -149,7 +150,6 @@
             { 
                 label: "Tipo de Operação", 
                 keys: ["xCaracSer", "caracSer", "xObs"],
-                // Corrigido: Removido typo e garantido "Tipo Operacao"
                 priorityAttr: ["TipoOperacao", "Tipo De Operacao", "OPERACAO", "FRACIONADO INBOUND"],
                 fallbackKeys: ["natOp", "CFOP"], 
                 category: "FIS" 
@@ -159,11 +159,9 @@
             { label: "Tipo Veículo", keys: ["veicTransp", "xTipo", "taper"], priorityAttr: ["TipoVeiculo", "TIPODEVICULO"], category: "FRO" },
             { label: "Origem", keys: ["xMunIni", "xMunOri"] },
             { label: "Destino", keys: ["xMunFim", "xMunDest"] },
-            // Regra do Frete Peso Restaurada e com Caminho Visível
             { label: "FRETE PESO", keys: ["FRETE PESO", "PESO", "FRETE_PESO"], isComponent: true, category: "FIN" },
             { label: "VALOR TOTAL", keys: ["vTPrest", "vNF"], hidePath: true, category: "FIN" },
             { label: "TIPO DE COBRANÇA", obsField: "TipoCobranca" },
-            // Atributos internos
             { label: "Rem Nome", parentTag: "rem", childTag: "xNome", internal: true },
             { label: "Rem CNPJ", parentTag: "rem", childTag: "CNPJ", internal: true },
             { label: "Emi Nome", parentTag: "emit", childTag: "xNome", internal: true },
@@ -175,33 +173,63 @@
         }
 
         async function handleFiles(files) {
-            document.getElementById('loading-overlay').style.display = 'flex';
+            const overlay = document.getElementById('loading-overlay');
+            const statusText = document.getElementById('loading-text');
+            const subText = document.getElementById('loading-subtext');
             
-            for (const file of Array.from(files)) {
-                if (file.name.endsWith('.xml')) {
-                    const text = await file.text();
-                    processXMLText(file.name, text);
-                } else if (file.name.endsWith('.zip')) {
-                    const zip = await JSZip.loadAsync(file);
-                    for (let filename in zip.files) {
-                        if (filename.endsWith('.xml')) {
-                            const text = await zip.files[filename].async("text");
-                            const baseName = filename.split('/').pop(); 
-                            processXMLText(baseName, text);
+            overlay.style.display = 'flex';
+            statusText.innerText = "Preparando Lote...";
+            
+            try {
+                const fileList = Array.from(files);
+                let processedCount = 0;
+
+                for (const file of fileList) {
+                    if (file.name.toLowerCase().endsWith('.xml')) {
+                        subText.innerText = `Lendo XML: ${file.name}`;
+                        try {
+                            const text = await file.text();
+                            processXMLText(file.name, text);
+                        } catch (err) { console.error("Erro ao ler XML individual:", err); }
+                        
+                    } else if (file.name.toLowerCase().endsWith('.zip')) {
+                        subText.innerText = `Descompactando: ${file.name}`;
+                        try {
+                            const zip = await JSZip.loadAsync(file);
+                            const zipFiles = Object.keys(zip.files);
+                            
+                            for (let filename of zipFiles) {
+                                // Ignora arquivos de sistema do MacOS ou pastas
+                                if (!zip.files[filename].dir && filename.toLowerCase().endsWith('.xml') && !filename.includes('__MACOSX')) {
+                                    subText.innerText = `Processando: ${filename}`;
+                                    const text = await zip.files[filename].async("text");
+                                    // Remove caminhos de pastas do nome
+                                    const cleanName = filename.split('/').pop(); 
+                                    processXMLText(cleanName, text);
+                                }
+                            }
+                        } catch (zipErr) {
+                            console.error("Erro ao processar ZIP:", zipErr);
+                            alert(`Erro ao processar o arquivo ZIP ${file.name}. Verifique se ele é válido.`);
                         }
                     }
+                    processedCount++;
                 }
+            } catch (globalErr) {
+                console.error("Erro crítico no processamento:", globalErr);
+                alert("Ocorreu um erro inesperado. Tente recarregar a página.");
+            } finally {
+                // Sempre executa, mesmo com erro
+                updateSidebarVisibility();
+                renderBatchList();
+                renderTagsWithFilter();
+                
+                if (batchData.length > 0) {
+                    selectFile(batchData.length - 1);
+                    switchTab('tab-info-xml');
+                }
+                overlay.style.display = 'none';
             }
-            
-            updateSidebarVisibility();
-            renderBatchList();
-            renderTagsWithFilter();
-            
-            if (batchData.length > 0) {
-                selectFile(batchData.length - 1);
-                switchTab('tab-info-xml');
-            }
-            document.getElementById('loading-overlay').style.display = 'none';
         }
 
         function normalize(str) {
@@ -234,6 +262,10 @@
 
         function processXMLText(filename, text) {
             const xmlDoc = new DOMParser().parseFromString(text, "text/xml");
+            
+            // Verificação básica se é um XML válido
+            if (xmlDoc.getElementsByTagName("parsererror").length > 0) return;
+
             const results = MAP_RULES.map(rule => {
                 let val = "N/A";
                 let path = "";
@@ -259,7 +291,7 @@
                     }
                 }
 
-                // Lógica 2: Componentes de Valor (FRETE PESO)
+                // Lógica 2: Componentes de Valor
                 if (!found && rule.isComponent) {
                     const targetNorms = rule.keys.map(k => normalize(k));
                     const xNomes = xmlDoc.getElementsByTagNameNS("*", "xNome");
@@ -277,9 +309,8 @@
                     }
                 }
 
-                // Lógica 3: Tags Diretas
+                // Lógica 3: Tags Diretas (Parent/Child)
                 if (!found && (rule.parentTag || rule.keys)) {
-                    // (Lógica existente para parentTag e keys simples)
                     if(rule.parentTag) {
                         const parents = xmlDoc.getElementsByTagNameNS("*", rule.parentTag);
                         if (parents.length > 0) {
@@ -433,7 +464,6 @@
         }
 
         function generateCSV(data, name) {
-            // Adicionado FretePeso_Valor e Operacao_Valor explicitamente
             let csv = "\uFEFFArquivo;CTe;Cobranca;NatOperacao;Caminho_Operacao;CFOP;Veiculo;Origem;Destino;Valor;FretePeso_Valor;Caminho_FretePeso\n";
             data.forEach(f => {
                 const getVal = (lbl) => f.results.find(r => r.label === lbl)?.value || "N/A";

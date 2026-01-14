@@ -40,7 +40,7 @@
 
     <div id="loading-overlay" class="loading-overlay">
         <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-        <p id="loading-text" class="text-sm font-bold uppercase tracking-widest text-center px-4">Lendo Arquivos...</p>
+        <p id="loading-text" class="text-sm font-bold uppercase tracking-widest text-center px-4">Processando XMLs...</p>
         <div class="progress-bar-container">
             <div id="progress-bar-fill" class="progress-bar-fill"></div>
         </div>
@@ -55,19 +55,19 @@
         </div>
         <nav class="flex-1 space-y-1">
             <div onclick="switchTab('tab-upload')" id="btn-tab-upload" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold tab-active">Upload</div>
-            <div onclick="switchTab('tab-tags')" id="btn-tab-tags" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold text-white">Tags & Lote</div>
-            <div onclick="switchTab('tab-info-xml')" id="btn-tab-info-xml" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold">Dados Detalhados</div>
+            <div onclick="switchTab('tab-tags')" id="btn-tab-tags" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold">Tags & Atributos</div>
+            <div onclick="switchTab('tab-dados')" id="btn-tab-dados" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold">Dados Embarque</div>
             <div onclick="switchTab('tab-gerador')" id="btn-tab-gerador" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold">Exportar</div>
         </nav>
         <div class="p-6 border-t border-slate-800">
-            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Versão 4.2 - Fix ObsCont Tags</p>
+            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Versão 4.5 - Dashboard de Dados</p>
         </div>
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10">
             <div class="flex items-center gap-2 text-[10px] font-black uppercase text-blue-500">
-                <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div> Monitor de Tags XML
+                <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div> Status: Operacional
             </div>
             <div id="status-badge" class="bg-slate-100 text-slate-500 text-[10px] font-black px-4 py-2 rounded-full uppercase">0 Arquivos</div>
         </header>
@@ -75,6 +75,7 @@
         <div class="flex-1 overflow-hidden flex">
             <div class="flex-1 overflow-auto p-8 bg-slate-50/50">
                 
+                <!-- ABA UPLOAD -->
                 <div id="tab-upload" class="tab-content active items-center justify-center">
                     <div id="drop-zone" class="w-full max-w-xl border-2 border-dashed border-slate-200 rounded-[2.5rem] p-20 text-center hover:border-blue-400 transition-all cursor-pointer bg-white shadow-sm">
                         <input type="file" id="file-input" class="hidden" accept=".xml,.zip" multiple>
@@ -84,45 +85,79 @@
                     </div>
                 </div>
 
-                <div id="tab-info-xml" class="tab-content">
-                    <div id="empty-state" class="text-center p-20 text-slate-400 flex flex-col items-center">
-                        <div class="text-4xl mb-4">📂</div>
-                        <p class="font-bold uppercase text-[10px] tracking-widest text-slate-400">Selecione um item na lista lateral</p>
+                <!-- ABA DADOS (NOVA/RETORNADA) -->
+                <div id="tab-dados" class="tab-content">
+                    <div id="empty-state-dados" class="text-center p-20 text-slate-400 flex flex-col items-center">
+                        <div class="text-4xl mb-4">🔍</div>
+                        <p class="font-bold uppercase text-[10px] tracking-widest text-slate-400">Selecione um arquivo na lista ao lado para ver os dados</p>
                     </div>
-                    <div id="info-container" class="hidden max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="bg-white p-8 rounded-[2rem] border border-slate-200 border-l-4 border-l-blue-500 shadow-sm">
-                            <span class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Remetente</span>
-                            <h4 id="display-rem-nome" class="text-lg font-bold text-slate-800 mt-2">---</h4>
-                            <p id="display-rem-cnpj" class="text-sm text-slate-500">CNPJ: ---</p>
+                    <div id="dados-container" class="hidden max-w-5xl mx-auto w-full space-y-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <!-- Embarcador / Remetente -->
+                            <div class="bg-white p-8 rounded-[2rem] border border-slate-200 border-l-8 border-l-blue-500 shadow-sm">
+                                <span class="text-[11px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-lg">Embarcador (Remetente)</span>
+                                <h4 id="display-rem-nome" class="text-xl font-bold text-slate-800 mt-4 leading-tight">---</h4>
+                                <div class="mt-4 flex items-center gap-2">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase">CNPJ:</span>
+                                    <p id="display-rem-cnpj" class="text-md font-mono font-bold text-slate-600">---</p>
+                                </div>
+                                <div id="display-rem-ender" class="mt-4 text-xs text-slate-500 leading-relaxed italic border-t border-slate-50 pt-4">---</div>
+                            </div>
+                            
+                            <!-- Transportadora / Emitente -->
+                            <div class="bg-white p-8 rounded-[2rem] border border-slate-200 border-l-8 border-l-emerald-500 shadow-sm">
+                                <span class="text-[11px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-lg">Transportadora (Emitente)</span>
+                                <h4 id="display-emi-nome" class="text-xl font-bold text-slate-800 mt-4 leading-tight">---</h4>
+                                <div class="mt-4 flex items-center gap-2">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase">CNPJ:</span>
+                                    <p id="display-emi-cnpj" class="text-md font-mono font-bold text-slate-600">---</p>
+                                </div>
+                                <div id="display-emi-ender" class="mt-4 text-xs text-slate-500 leading-relaxed italic border-t border-slate-50 pt-4">---</div>
+                            </div>
                         </div>
-                        <div class="bg-white p-8 rounded-[2rem] border border-slate-200 border-l-4 border-l-emerald-500 shadow-sm">
-                            <span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Emitente</span>
-                            <h4 id="display-emi-nome" class="text-lg font-bold text-slate-800 mt-2">---</h4>
-                            <p id="display-emi-cnpj" class="text-sm text-slate-500">CNPJ: ---</p>
+
+                        <!-- Card de Resumo do CTe -->
+                        <div class="bg-[#0f172a] text-white p-8 rounded-[2rem] shadow-xl flex flex-wrap gap-10 items-center justify-between">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Número do CTe</p>
+                                <p id="display-nct" class="text-3xl font-black text-blue-400">---</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Valor do Frete</p>
+                                <p id="display-vprest" class="text-3xl font-black text-white">R$ 0,00</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Chave de Acesso</p>
+                                <p id="display-chave" class="text-[11px] font-mono text-slate-400 break-all max-w-xs">---</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- ABA TAGS -->
                 <div id="tab-tags" class="tab-content">
                     <div class="mb-6 flex items-center justify-between">
                         <div class="flex-1 max-w-lg">
-                             <input type="text" id="tag-batch-search" oninput="renderTagsWithFilter()" placeholder="Filtrar por CTe..." class="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
+                             <input type="text" id="tag-batch-search" oninput="renderTagsWithFilter()" placeholder="Pesquisar por CTe..." class="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20" id="tags-grid"></div>
                 </div>
 
+                <!-- ABA EXPORTAR -->
                 <div id="tab-gerador" class="tab-content items-center justify-center text-center space-y-6">
-                    <h3 class="text-2xl font-black text-slate-800">Exportar Resultados</h3>
+                    <h3 class="text-2xl font-black text-slate-800">Exportar Relatório</h3>
+                    <p class="text-slate-500">Gere uma planilha Excel com todos os dados e atributos extraídos.</p>
                     <button onclick="exportToCSV()" class="bg-emerald-600 text-white px-10 py-5 rounded-2xl font-bold shadow-lg hover:bg-emerald-700 transition-all flex items-center gap-3">
-                        <span>📊</span> BAIXAR CSV COMPLETO (EXCEL)
+                        <span>📊</span> BAIXAR CSV COMPLETO
                     </button>
                 </div>
             </div>
 
+            <!-- LISTA LATERAL DE ARQUIVOS -->
             <div id="batch-sidebar" class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 sidebar-hidden transition-all duration-300">
                 <div class="p-6 border-b border-slate-100 bg-slate-50/50">
-                    <input type="text" id="search-files" oninput="debouncedRenderBatchList()" placeholder="Pesquisar arquivo..." class="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs outline-none focus:ring-1 focus:ring-blue-500 shadow-sm">
+                    <input type="text" id="search-files" oninput="debouncedRenderBatchList()" placeholder="Filtrar lote..." class="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs outline-none focus:ring-1 focus:ring-blue-500 shadow-sm">
                 </div>
                 <div id="batch-list" class="flex-1 overflow-auto p-4 space-y-3"></div>
             </div>
@@ -134,26 +169,10 @@
         let selectedIndex = -1;
         let renderTimeout = null;
 
-        // Configuração aprimorada de Tags baseada no seu XML real
         const TAGS_TO_FIND = [
-            { 
-                label: "Tipo de Veículo", 
-                id: "TipoVeiculo", 
-                searchNames: ["TipoVeiculo", "Tipo de Veiculo", "xTipoVeiculo", "veicTipo"],
-                color: "blue"
-            },
-            { 
-                label: "Tipo de Cobrança", 
-                id: "TipoCobranca", 
-                searchNames: ["TipoCobranca", "Tipo de Cobranca", "tpCobranca", "xTipoCobranca"],
-                color: "emerald"
-            },
-            { 
-                label: "Tipo de Operação", 
-                id: "TipoOperacao", 
-                searchNames: ["TipoOperacao", "Tipo de Operacao", "caracSer", "xCaracSer"],
-                color: "amber"
-            }
+            { id: "TipoVeiculo", label: "Tipo de Veículo", searchNames: ["TipoVeiculo", "xTipoVeiculo"], color: "blue" },
+            { id: "TipoCobranca", label: "Tipo de Cobrança", searchNames: ["TipoCobranca", "xTipoCobranca"], color: "emerald" },
+            { id: "TipoOperacao", label: "Tipo de Operação", searchNames: ["TipoOperacao", "xTipoOperacao"], color: "amber" }
         ];
 
         function closeWelcome() {
@@ -166,35 +185,24 @@
             const fileList = Array.from(files);
             
             try {
-                for (let fIdx = 0; fIdx < fileList.length; fIdx++) {
-                    const file = fileList[fIdx];
+                for (let file of fileList) {
                     if (file.name.toLowerCase().endsWith('.xml')) {
-                        const text = await file.text();
-                        processXML(file.name, text);
+                        processXML(file.name, await file.text());
                     } else if (file.name.toLowerCase().endsWith('.zip')) {
                         const zip = await JSZip.loadAsync(file);
                         const zipFiles = Object.keys(zip.files).filter(n => n.endsWith('.xml') && !n.includes('__MACOSX'));
-                        for (let zIdx = 0; zIdx < zipFiles.length; zIdx++) {
-                            const text = await zip.files[zipFiles[zIdx]].async("text");
-                            processXML(zipFiles[zIdx].split('/').pop(), text);
-                            if (zIdx % 20 === 0) updateProgress(zIdx, zipFiles.length);
+                        for (let zName of zipFiles) {
+                            processXML(zName.split('/').pop(), await zip.files[zName].async("text"));
                         }
                     }
                 }
-            } catch (e) {
-                console.error(e);
-            } finally {
-                updateSidebarVisibility();
-                debouncedRenderBatchList();
-                renderTagsWithFilter();
-                switchTab('tab-tags');
-                overlay.style.display = 'none';
-            }
-        }
-
-        function updateProgress(curr, total) {
-            const fill = document.getElementById('progress-bar-fill');
-            fill.style.width = Math.round((curr / total) * 100) + '%';
+            } catch (e) { console.error(e); }
+            
+            updateSidebarVisibility();
+            debouncedRenderBatchList();
+            renderTagsWithFilter();
+            switchTab('tab-tags');
+            overlay.style.display = 'none';
         }
 
         function normalize(s) {
@@ -205,64 +213,74 @@
             const parser = new DOMParser();
             const xml = parser.parseFromString(text, "text/xml");
             
-            // 1. Número do CTe
             const nCT = xml.getElementsByTagNameNS("*", "nCT")[0]?.textContent || "S/N";
+            const chave = xml.getElementsByTagNameNS("*", "chCTe")[0]?.textContent || xml.getElementsByTagNameNS("*", "infCte")[0]?.getAttribute("Id")?.replace("CTe", "") || "---";
+            const vPrest = xml.getElementsByTagNameNS("*", "vTPrest")[0]?.textContent || "0.00";
 
-            // 2. Extração de Tags Específicas (TipoVeiculo, etc)
+            // Extração de Atributos (ObsCont)
             const extractedTags = TAGS_TO_FIND.map(tagRule => {
-                let value = "Não encontrado";
+                let value = "Não informado";
                 let path = "---";
-
-                // Busca em ObsCont (conforme seu XML)
                 const obsConts = Array.from(xml.getElementsByTagNameNS("*", "ObsCont"));
                 for (const obs of obsConts) {
-                    const xCampoAttr = obs.getAttribute("xCampo") || "";
-                    if (tagRule.searchNames.some(name => normalize(name) === normalize(xCampoAttr))) {
+                    const xCampo = obs.getAttribute("xCampo") || "";
+                    if (tagRule.searchNames.some(name => normalize(name) === normalize(xCampo))) {
                         const xTexto = obs.getElementsByTagNameNS("*", "xTexto")[0] || obs.getElementsByTagNameNS("*", "xtexto")[0];
                         if (xTexto) {
-                            value = xTexto.textContent.trim() || "(Vazio)";
-                            path = `ObsCont[@xCampo='${xCampoAttr}']/xTexto`;
+                            value = xTexto.textContent.trim();
+                            path = `ObsCont[@xCampo='${xCampo}']/xTexto`;
                             break;
                         }
                     }
                 }
-
-                // Se não achou em ObsCont, busca por Tag Direta
-                if (value === "Não encontrado") {
-                    for (const name of tagRule.searchNames) {
-                        const direct = xml.getElementsByTagNameNS("*", name)[0];
-                        if (direct) {
-                            value = direct.textContent.trim();
-                            path = `<${direct.localName}>`;
-                            break;
-                        }
-                    }
-                }
-
                 return { ...tagRule, value, path };
             });
 
-            // 3. Frete Peso e Outros
-            const fretePesoNode = Array.from(xml.getElementsByTagNameNS("*", "Comp")).find(c => {
-                const name = c.getElementsByTagNameNS("*", "xNome")[0]?.textContent || "";
-                return normalize(name).includes("fretepeso");
-            });
-            const fretePeso = fretePesoNode ? fretePesoNode.getElementsByTagNameNS("*", "vComp")[0]?.textContent : "N/A";
-
-            // 4. Dados Cadastrais
-            const getVal = (p, c) => xml.getElementsByTagNameNS("*", p)[0]?.getElementsByTagNameNS("*", c)[0]?.textContent || "N/A";
+            // Dados Cadastrais
+            const getVal = (parent, tag) => xml.getElementsByTagNameNS("*", parent)[0]?.getElementsByTagNameNS("*", tag)[0]?.textContent || "Não consta";
+            const getEnder = (parent) => {
+                const node = xml.getElementsByTagNameNS("*", parent)[0];
+                if (!node) return "Endereço não localizado";
+                const lgr = node.getElementsByTagNameNS("*", "xLgr")[0]?.textContent || "";
+                const nro = node.getElementsByTagNameNS("*", "nro")[0]?.textContent || "";
+                const mun = node.getElementsByTagNameNS("*", "xMun")[0]?.textContent || "";
+                const uf = node.getElementsByTagNameNS("*", "UF")[0]?.textContent || "";
+                return `${lgr}, ${nro} - ${mun}/${uf}`;
+            };
 
             batchData.push({
-                filename,
-                nCT,
+                filename, nCT, chave, vPrest,
                 extractedTags,
-                fretePeso,
                 remNome: getVal("rem", "xNome"),
-                remCnpj: getVal("rem", "CNPJ"),
+                remCnpj: getVal("rem", "CNPJ") || getVal("rem", "CPF"),
+                remEnder: getEnder("enderReme"),
                 emiNome: getVal("emit", "xNome"),
                 emiCnpj: getVal("emit", "CNPJ"),
-                xml_raw: text
+                emiEnder: getEnder("enderEmit")
             });
+        }
+
+        function selectFile(index) {
+            selectedIndex = index;
+            const file = batchData[index];
+            renderBatchList();
+            
+            document.getElementById('empty-state-dados').classList.add('hidden');
+            document.getElementById('dados-container').classList.remove('hidden');
+            
+            document.getElementById('display-rem-nome').innerText = file.remNome;
+            document.getElementById('display-rem-cnpj').innerText = file.remCnpj;
+            document.getElementById('display-rem-ender').innerText = file.remEnder;
+            
+            document.getElementById('display-emi-nome').innerText = file.emiNome;
+            document.getElementById('display-emi-cnpj').innerText = file.emiCnpj;
+            document.getElementById('display-emi-ender').innerText = file.emiEnder;
+            
+            document.getElementById('display-nct').innerText = file.nCT;
+            document.getElementById('display-vprest').innerText = "R$ " + parseFloat(file.vPrest).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            document.getElementById('display-chave').innerText = file.chave;
+            
+            switchTab('tab-dados');
         }
 
         function renderTagsWithFilter() {
@@ -270,50 +288,29 @@
             const search = document.getElementById('tag-batch-search').value.toLowerCase();
             grid.innerHTML = '';
             
-            const filtered = batchData.filter(f => f.nCT.toLowerCase().includes(search));
-            const fragment = document.createDocumentFragment();
-
-            filtered.slice(0, 100).forEach(file => {
+            batchData.filter(f => f.nCT.toLowerCase().includes(search)).forEach(file => {
                 const div = document.createElement('div');
-                div.className = "tag-card border-l-4 border-l-blue-600 shadow-sm hover:shadow-md transition-all";
-                
-                let tagsHtml = file.extractedTags.map(t => `
-                    <div class="mb-3">
-                        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-tight">${t.label}</p>
-                        <p class="text-sm font-bold text-slate-800">${t.value}</p>
-                        <span class="path-display">${t.path}</span>
-                    </div>
-                `).join('');
-
+                div.className = "tag-card border-l-4 border-l-blue-600 shadow-sm";
                 div.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <span class="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded">CTe: ${file.nCT}</span>
-                        </div>
-                        <div class="text-right">
-                             <p class="text-[9px] text-slate-400 font-bold uppercase">Frete Peso</p>
-                             <p class="text-xs font-black text-blue-600">R$ ${file.fretePeso}</p>
-                        </div>
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[10px] font-black bg-slate-100 px-2 py-1 rounded">CTe: ${file.nCT}</span>
                     </div>
-                    <div class="space-y-1">
-                        ${tagsHtml}
-                    </div>
+                    ${file.extractedTags.map(t => `
+                        <div class="mb-3">
+                            <p class="text-[9px] text-slate-400 font-bold uppercase">${t.label}</p>
+                            <p class="text-sm font-bold text-slate-800">${t.value}</p>
+                            <span class="path-display">${t.path}</span>
+                        </div>
+                    `).join('')}
                 `;
-                fragment.appendChild(div);
+                grid.appendChild(div);
             });
-            grid.appendChild(fragment);
-        }
-
-        function debouncedRenderBatchList() {
-            clearTimeout(renderTimeout);
-            renderTimeout = setTimeout(renderBatchList, 300);
         }
 
         function renderBatchList() {
             const list = document.getElementById('batch-list');
             const search = document.getElementById('search-files').value.toLowerCase();
             list.innerHTML = '';
-            
             batchData.forEach((file, i) => {
                 if (file.filename.toLowerCase().includes(search) || file.nCT.includes(search)) {
                     const div = document.createElement('div');
@@ -321,8 +318,8 @@
                     div.onclick = () => selectFile(i);
                     div.innerHTML = `
                         <button class="btn-delete" onclick="deleteFile(${i}, event)">✕</button>
-                        <p class="text-[11px] font-bold truncate pr-6">${file.filename}</p>
-                        <p class="text-[9px] text-slate-500 mt-1 uppercase">CTe: ${file.nCT}</p>
+                        <p class="text-[11px] font-bold truncate">${file.filename}</p>
+                        <p class="text-[9px] text-slate-500 uppercase mt-1">CTe: ${file.nCT}</p>
                     `;
                     list.appendChild(div);
                 }
@@ -330,22 +327,19 @@
             document.getElementById('status-badge').innerText = `${batchData.length} Arquivos`;
         }
 
-        function selectFile(index) {
-            selectedIndex = index;
-            const file = batchData[index];
-            renderBatchList();
-            document.getElementById('empty-state').classList.add('hidden');
-            document.getElementById('info-container').classList.remove('hidden');
-            document.getElementById('display-rem-nome').innerText = file.remNome;
-            document.getElementById('display-rem-cnpj').innerText = "CNPJ: " + file.remCnpj;
-            document.getElementById('display-emi-nome').innerText = file.emiNome;
-            document.getElementById('display-emi-cnpj').innerText = "CNPJ: " + file.emiCnpj;
+        function debouncedRenderBatchList() {
+            clearTimeout(renderTimeout);
+            renderTimeout = setTimeout(renderBatchList, 300);
         }
 
         function deleteFile(index, event) {
             event.stopPropagation();
             batchData.splice(index, 1);
-            if (selectedIndex === index) selectedIndex = -1;
+            if (selectedIndex === index) {
+                selectedIndex = -1;
+                document.getElementById('dados-container').classList.add('hidden');
+                document.getElementById('empty-state-dados').classList.remove('hidden');
+            }
             debouncedRenderBatchList();
             renderTagsWithFilter();
             updateSidebarVisibility();
@@ -365,17 +359,17 @@
 
         function exportToCSV() {
             if (batchData.length === 0) return;
-            let csv = "\uFEFFArquivo;CTe;Veiculo;Cobranca;Operacao;Peso\n";
+            let csv = "\uFEFFCTe;Chave;Embarcador;CNPJ_Emb;Transportadora;CNPJ_Trans;Veiculo;Cobranca;Operacao;Valor\n";
             batchData.forEach(f => {
                 const v = f.extractedTags.find(t => t.id === "TipoVeiculo")?.value || "";
                 const c = f.extractedTags.find(t => t.id === "TipoCobranca")?.value || "";
                 const o = f.extractedTags.find(t => t.id === "TipoOperacao")?.value || "";
-                csv += `"${f.filename}";"${f.nCT}";"${v}";"${c}";"${o}";"${f.fretePeso}"\n`;
+                csv += `"${f.nCT}";"${f.chave}";"${f.remNome}";"${f.remCnpj}";"${f.emiNome}";"${f.emiCnpj}";"${v}";"${c}";"${o}";"${f.vPrest}"\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = "auditoria_tags_forja.csv";
+            link.download = "relatorio_cte_forja.csv";
             link.click();
         }
 

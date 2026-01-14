@@ -6,7 +6,6 @@
     <title>Forja Atributo - Cloud Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: #f8fafc; }
@@ -26,6 +25,8 @@
         .btn-delete { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; background: #fee2e2; color: #ef4444; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; opacity: 0; transition: opacity 0.2s; z-index: 10; }
         .file-card:hover .btn-delete { opacity: 1; }
         #welcome-screen { position: fixed; inset: 0; background: #0f172a; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; cursor: pointer; text-align: center; }
+        .progress-bar-container { width: 300px; height: 8px; background: #1e293b; border-radius: 10px; margin-top: 20px; overflow: hidden; }
+        .progress-bar-fill { width: 0%; height: 100%; background: #3b82f6; transition: width 0.3s; }
     </style>
 </head>
 <body class="text-slate-900 h-screen flex">
@@ -38,10 +39,14 @@
         <div class="mt-12 text-sm text-blue-500 font-bold animate-pulse">CLIQUE EM QUALQUER LUGAR PARA COMEÇAR</div>
     </div>
 
+    <!-- Overlay de Carregamento Otimizado -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-        <p id="loading-text" class="text-sm font-bold uppercase tracking-widest">Iniciando...</p>
-        <p id="loading-subtext" class="text-xs text-slate-400 mt-2">Aguarde, processando arquivos...</p>
+        <p id="loading-text" class="text-sm font-bold uppercase tracking-widest text-center px-4">Iniciando...</p>
+        <div class="progress-bar-container">
+            <div id="progress-bar-fill" class="progress-bar-fill"></div>
+        </div>
+        <p id="loading-subtext" class="text-xs text-slate-400 mt-4">Aguarde, processando arquivos em massa...</p>
     </div>
 
     <!-- Barra Lateral Esquerda -->
@@ -59,14 +64,14 @@
             <div onclick="switchTab('tab-gerador')" id="btn-tab-gerador" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold">Exportar</div>
         </nav>
         <div class="p-6 border-t border-slate-800">
-            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Versão 3.3 - ZIP Ilimitado</p>
+            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Versão 4.0 - Lotes Massivos (7k+)</p>
         </div>
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10">
             <div class="flex items-center gap-2 text-[10px] font-black uppercase text-blue-500">
-                <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div> Ambiente Local Ativo
+                <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div> Ambiente de Alta Performance
             </div>
             <div id="status-badge" class="bg-slate-100 text-slate-500 text-[10px] font-black px-4 py-2 rounded-full uppercase">0 Arquivos</div>
         </header>
@@ -78,8 +83,8 @@
                     <div id="drop-zone" class="w-full max-w-xl border-2 border-dashed border-slate-200 rounded-[2.5rem] p-20 text-center hover:border-blue-400 transition-all cursor-pointer bg-white shadow-sm">
                         <input type="file" id="file-input" class="hidden" accept=".xml,.zip" multiple>
                         <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl">📥</div>
-                        <h3 class="text-xl font-bold text-slate-800">Selecione XML ou ZIP</h3>
-                        <p class="text-slate-400 text-sm mt-2">Processamento robusto para grandes lotes.</p>
+                        <h3 class="text-xl font-bold text-slate-800">Importar ZIP ou XML</h3>
+                        <p class="text-slate-400 text-sm mt-2">Otimizado para mais de 7.000 arquivos.</p>
                     </div>
                 </div>
 
@@ -87,7 +92,7 @@
                 <div id="tab-info-xml" class="tab-content">
                     <div id="empty-state" class="text-center p-20 text-slate-400 flex flex-col items-center">
                         <div class="text-4xl mb-4">📂</div>
-                        <p class="font-bold uppercase text-[10px] tracking-widest">Nenhum arquivo selecionado</p>
+                        <p class="font-bold uppercase text-[10px] tracking-widest">Selecione um arquivo na lateral</p>
                     </div>
                     <div id="info-container" class="hidden max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div class="bg-white p-8 rounded-[2rem] border border-slate-200 border-l-4 border-l-blue-500 shadow-sm">
@@ -107,7 +112,7 @@
                 <div id="tab-tags" class="tab-content">
                     <div class="mb-6 flex items-center justify-between">
                         <div class="flex-1 max-w-lg">
-                             <input type="text" id="tag-batch-search" oninput="renderTagsWithFilter()" placeholder="Pesquisar por CTe (ex: 890467, 123456)..." class="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
+                             <input type="text" id="tag-batch-search" oninput="renderTagsWithFilter()" placeholder="Pesquisar por CTe (ex: 890467)..." class="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         <button onclick="exportFilteredTags()" class="ml-4 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md hover:bg-blue-700 transition-all flex items-center gap-2">
                              <span>📄</span> EXPORTAR FILTRADOS
@@ -130,10 +135,10 @@
                 </div>
             </div>
 
-            <!-- Sidebar Direita -->
+            <!-- Sidebar Direita Otimizada -->
             <div id="batch-sidebar" class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 sidebar-hidden transition-all duration-300">
                 <div class="p-6 border-b border-slate-100 bg-slate-50/50">
-                    <textarea id="search-files" oninput="renderBatchList()" placeholder="Filtrar lateral..." class="w-full h-16 bg-white border border-slate-200 rounded-xl p-3 text-xs outline-none focus:ring-1 focus:ring-blue-500 resize-none shadow-sm"></textarea>
+                    <input type="text" id="search-files" oninput="debouncedRenderBatchList()" placeholder="Filtrar arquivos..." class="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs outline-none focus:ring-1 focus:ring-blue-500 shadow-sm">
                 </div>
                 <div id="batch-list" class="flex-1 overflow-auto p-4 space-y-3"></div>
             </div>
@@ -143,25 +148,19 @@
     <script>
         let batchData = [];
         let selectedIndex = -1;
+        let renderTimeout = null;
 
-        // Mapeamento atualizado e corrigido
         const MAP_RULES = [
-            { label: "Número CTe", keys: ["nCT", "nProt"], category: "ID" },
+            { label: "Número CTe", keys: ["nCT", "nProt"] },
             { 
                 label: "Tipo de Operação", 
                 keys: ["xCaracSer", "caracSer", "xObs"],
-                priorityAttr: ["TipoOperacao", "Tipo De Operacao", "OPERACAO", "FRACIONADO INBOUND"],
-                fallbackKeys: ["natOp", "CFOP"], 
-                category: "FIS" 
+                priorityAttr: ["TipoOperacao", "Tipo De Operacao", "OPERACAO"],
+                fallbackKeys: ["natOp"]
             },
             { label: "CFOP", keys: ["CFOP"] },
-            { label: "Modal", keys: ["modal"] },
-            { label: "Tipo Veículo", keys: ["veicTransp", "xTipo", "taper"], priorityAttr: ["TipoVeiculo", "TIPODEVICULO"], category: "FRO" },
-            { label: "Origem", keys: ["xMunIni", "xMunOri"] },
-            { label: "Destino", keys: ["xMunFim", "xMunDest"] },
-            { label: "FRETE PESO", keys: ["FRETE PESO", "PESO", "FRETE_PESO"], isComponent: true, category: "FIN" },
-            { label: "VALOR TOTAL", keys: ["vTPrest", "vNF"], hidePath: true, category: "FIN" },
-            { label: "TIPO DE COBRANÇA", obsField: "TipoCobranca" },
+            { label: "FRETE PESO", keys: ["FRETE PESO", "PESO"], isComponent: true },
+            { label: "VALOR TOTAL", keys: ["vTPrest", "vNF"], hidePath: true },
             { label: "Rem Nome", parentTag: "rem", childTag: "xNome", internal: true },
             { label: "Rem CNPJ", parentTag: "rem", childTag: "CNPJ", internal: true },
             { label: "Emi Nome", parentTag: "emit", childTag: "xNome", internal: true },
@@ -172,62 +171,57 @@
             document.getElementById('welcome-screen').style.display = 'none';
         }
 
+        function updateProgress(current, total) {
+            const fill = document.getElementById('progress-bar-fill');
+            const perc = Math.round((current / total) * 100);
+            fill.style.width = perc + '%';
+            document.getElementById('loading-text').innerText = `Processando: ${current} de ${total} (${perc}%)`;
+        }
+
         async function handleFiles(files) {
             const overlay = document.getElementById('loading-overlay');
-            const statusText = document.getElementById('loading-text');
             const subText = document.getElementById('loading-subtext');
-            
             overlay.style.display = 'flex';
-            statusText.innerText = "Preparando Lote...";
             
             try {
                 const fileList = Array.from(files);
-                let processedCount = 0;
-
                 for (const file of fileList) {
                     if (file.name.toLowerCase().endsWith('.xml')) {
-                        subText.innerText = `Lendo XML: ${file.name}`;
-                        try {
-                            const text = await file.text();
-                            processXMLText(file.name, text);
-                        } catch (err) { console.error("Erro ao ler XML individual:", err); }
-                        
+                        const text = await file.text();
+                        processXMLText(file.name, text);
                     } else if (file.name.toLowerCase().endsWith('.zip')) {
-                        subText.innerText = `Descompactando: ${file.name}`;
-                        try {
-                            const zip = await JSZip.loadAsync(file);
-                            const zipFiles = Object.keys(zip.files);
+                        const zip = await JSZip.loadAsync(file);
+                        const zipFiles = Object.keys(zip.files).filter(name => 
+                            !zip.files[name].dir && 
+                            name.toLowerCase().endsWith('.xml') && 
+                            !name.includes('__MACOSX')
+                        );
+
+                        const totalZipFiles = zipFiles.length;
+                        // Processamento em Chunks (Lotes) de 100 para não travar o browser
+                        const chunkSize = 100;
+                        for (let i = 0; i < totalZipFiles; i += chunkSize) {
+                            const chunk = zipFiles.slice(i, i + chunkSize);
                             
-                            for (let filename of zipFiles) {
-                                // Ignora arquivos de sistema do MacOS ou pastas
-                                if (!zip.files[filename].dir && filename.toLowerCase().endsWith('.xml') && !filename.includes('__MACOSX')) {
-                                    subText.innerText = `Processando: ${filename}`;
-                                    const text = await zip.files[filename].async("text");
-                                    // Remove caminhos de pastas do nome
-                                    const cleanName = filename.split('/').pop(); 
-                                    processXMLText(cleanName, text);
-                                }
-                            }
-                        } catch (zipErr) {
-                            console.error("Erro ao processar ZIP:", zipErr);
-                            alert(`Erro ao processar o arquivo ZIP ${file.name}. Verifique se ele é válido.`);
+                            await Promise.all(chunk.map(async (filename) => {
+                                const text = await zip.files[filename].async("text");
+                                processXMLText(filename.split('/').pop(), text);
+                            }));
+
+                            updateProgress(Math.min(i + chunkSize, totalZipFiles), totalZipFiles);
+                            // Pequena pausa para o navegador "respirar" e atualizar a UI
+                            await new Promise(r => setTimeout(r, 10));
                         }
                     }
-                    processedCount++;
                 }
-            } catch (globalErr) {
-                console.error("Erro crítico no processamento:", globalErr);
-                alert("Ocorreu um erro inesperado. Tente recarregar a página.");
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao processar lote. Verifique o arquivo ZIP.");
             } finally {
-                // Sempre executa, mesmo com erro
                 updateSidebarVisibility();
-                renderBatchList();
+                debouncedRenderBatchList();
                 renderTagsWithFilter();
-                
-                if (batchData.length > 0) {
-                    selectFile(batchData.length - 1);
-                    switchTab('tab-info-xml');
-                }
+                if (batchData.length > 0) switchTab('tab-tags');
                 overlay.style.display = 'none';
             }
         }
@@ -237,218 +231,152 @@
             return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
         }
 
-        function getFullXPath(node) {
-            if (!node || node.nodeType !== 1) return "Raiz";
-            let path = [];
-            let current = node;
-            while (current && current.nodeType === 1) {
-                let nodeName = current.localName || current.nodeName;
-                const cleanName = nodeName.split(':').pop();
-                const xCampo = current.getAttribute("xCampo");
-                let entry = cleanName;
-                
-                if (xCampo) {
-                    entry += `[xCampo='${xCampo}']`;
-                } else if (normalize(cleanName) === "VCOMP") {
-                    const xNomeNode = Array.from(current.parentNode.children).find(c => normalize(c.localName || c.nodeName) === "XNOME");
-                    if (xNomeNode) entry = `Comp[xNome='${xNomeNode.textContent}'] > vComp`;
-                }
-                
-                path.unshift(entry);
-                current = current.parentNode;
-            }
-            return path.join(" > ");
-        }
-
         function processXMLText(filename, text) {
-            const xmlDoc = new DOMParser().parseFromString(text, "text/xml");
-            
-            // Verificação básica se é um XML válido
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, "text/xml");
             if (xmlDoc.getElementsByTagName("parsererror").length > 0) return;
 
             const results = MAP_RULES.map(rule => {
                 let val = "N/A";
                 let path = "";
                 let found = false;
-                
-                // Lógica 1: ObsCont com xCampo
-                if (rule.priorityAttr || rule.obsField) {
-                    const targets = rule.priorityAttr || [rule.obsField];
-                    const targetNorms = targets.map(t => normalize(t));
+
+                if (rule.priorityAttr) {
                     const obsConts = xmlDoc.getElementsByTagNameNS("*", "ObsCont");
-                    
                     for (let obs of obsConts) {
                         const xCampo = obs.getAttribute("xCampo");
-                        if (xCampo && targetNorms.includes(normalize(xCampo))) {
+                        if (xCampo && rule.priorityAttr.some(t => normalize(t) === normalize(xCampo))) {
                             const xTexto = obs.getElementsByTagNameNS("*", "xTexto")[0] || obs.getElementsByTagNameNS("*", "xtexto")[0];
-                            if (xTexto) {
-                                val = xTexto.textContent.trim();
-                                path = getFullXPath(xTexto);
-                                found = true;
-                                break;
-                            }
+                            if (xTexto) { val = xTexto.textContent.trim(); found = true; break; }
                         }
                     }
                 }
 
-                // Lógica 2: Componentes de Valor
                 if (!found && rule.isComponent) {
-                    const targetNorms = rule.keys.map(k => normalize(k));
                     const xNomes = xmlDoc.getElementsByTagNameNS("*", "xNome");
                     for (let xNomeNode of xNomes) {
-                        if (targetNorms.includes(normalize(xNomeNode.textContent))) {
-                            const parent = xNomeNode.parentNode;
-                            const vCompNode = Array.from(parent.children).find(c => normalize(c.localName || c.nodeName).includes("VCOMP"));
-                            if (vCompNode) {
-                                val = vCompNode.textContent.trim();
-                                path = getFullXPath(vCompNode);
-                                found = true;
-                                break;
-                            }
+                        if (rule.keys.some(k => normalize(k) === normalize(xNomeNode.textContent))) {
+                            const vCompNode = Array.from(xNomeNode.parentNode.children).find(c => c.localName.toLowerCase().includes("vcomp"));
+                            if (vCompNode) { val = vCompNode.textContent.trim(); found = true; break; }
                         }
                     }
                 }
 
-                // Lógica 3: Tags Diretas (Parent/Child)
-                if (!found && (rule.parentTag || rule.keys)) {
-                    if(rule.parentTag) {
-                        const parents = xmlDoc.getElementsByTagNameNS("*", rule.parentTag);
-                        if (parents.length > 0) {
-                            const child = parents[0].getElementsByTagNameNS("*", rule.childTag);
-                            if (child.length > 0) { val = child[0].textContent.trim(); found = true; }
-                        }
-                    } else if (rule.keys) {
-                        for(let k of rule.keys) {
-                            const n = xmlDoc.getElementsByTagNameNS("*", k)[0];
-                            if(n) { 
-                                val = n.textContent.trim();
-                                path = getFullXPath(n);
-                                found = true;
-                                break; 
-                            }
-                        }
+                if (!found && rule.keys) {
+                    for (let k of rule.keys) {
+                        const node = xmlDoc.getElementsByTagNameNS("*", k)[0];
+                        if (node) { val = node.textContent.trim(); found = true; break; }
                     }
                 }
 
-                // Lógica 5: Fallback Keys
-                if (!found && rule.fallbackKeys) {
-                    for(let k of rule.fallbackKeys) {
-                        const n = xmlDoc.getElementsByTagNameNS("*", k)[0];
-                        if(n) {
-                            val = n.textContent.trim();
-                            path = getFullXPath(n);
-                            found = true;
-                            break;
-                        }
+                if (!found && rule.parentTag) {
+                    const parent = xmlDoc.getElementsByTagNameNS("*", rule.parentTag)[0];
+                    if (parent) {
+                        const child = parent.getElementsByTagNameNS("*", rule.childTag)[0];
+                        if (child) { val = child.textContent.trim(); found = true; }
                     }
                 }
 
-                return { label: rule.label, value: val, path: path, found: found, hidePath: rule.hidePath, internal: rule.internal || false };
+                return { label: rule.label, value: val, internal: rule.internal || false };
             });
 
             const nCT = results.find(r => r.label === "Número CTe")?.value || "S/N";
             batchData.push({ filename, nCT, results, xml_raw: text });
         }
 
+        // Função debounced para não travar ao digitar no filtro de 7 mil itens
+        function debouncedRenderBatchList() {
+            clearTimeout(renderTimeout);
+            renderTimeout = setTimeout(renderBatchList, 300);
+        }
+
+        function renderBatchList() {
+            const list = document.getElementById('batch-list');
+            const search = document.getElementById('search-files').value.toLowerCase();
+            
+            // DocumentFragment para performance de inserção massiva
+            const fragment = document.createDocumentFragment();
+            list.innerHTML = '';
+            
+            // Filtro e limite de exibição na sidebar para performance (mostra os primeiros 200 matches)
+            let count = 0;
+            for (let i = 0; i < batchData.length; i++) {
+                const file = batchData[i];
+                if (file.filename.toLowerCase().includes(search) || file.nCT.includes(search)) {
+                    const div = document.createElement('div');
+                    div.className = `file-card ${i === selectedIndex ? 'selected' : ''}`;
+                    div.onclick = () => selectFile(i);
+                    div.innerHTML = `
+                        <button class="btn-delete" onclick="deleteFile(${i}, event)">✕</button>
+                        <p class="text-[11px] font-bold truncate pr-6">${file.filename}</p>
+                        <p class="text-[9px] text-blue-500 font-bold mt-1 uppercase">CTe: ${file.nCT}</p>
+                    `;
+                    fragment.appendChild(div);
+                    count++;
+                    if (count > 200) break; // Limite visual para não travar o browser
+                }
+            }
+            list.appendChild(fragment);
+            document.getElementById('status-badge').innerText = `${batchData.length} Arquivos`;
+        }
+
         function renderTagsWithFilter() {
             const grid = document.getElementById('tags-grid');
             const searchVal = document.getElementById('tag-batch-search').value.toLowerCase();
-            const searchTerms = searchVal.split(/[\s,]+/).filter(t => t.length > 0);
-            
             grid.innerHTML = '';
             
-            batchData.forEach((file, idx) => {
-                const matches = searchTerms.length === 0 || searchTerms.some(term => file.nCT.toLowerCase().includes(term));
-                
-                if (matches) {
+            const fragment = document.createDocumentFragment();
+            let count = 0;
+
+            for (let i = 0; i < batchData.length; i++) {
+                const file = batchData[i];
+                if (!searchVal || file.nCT.includes(searchVal)) {
                     const op = file.results.find(r => r.label === "Tipo de Operação")?.value || "N/A";
-                    const opPath = file.results.find(r => r.label === "Tipo de Operação")?.path || "";
                     const peso = file.results.find(r => r.label === "FRETE PESO")?.value || "0.00";
-                    const pesoPath = file.results.find(r => r.label === "FRETE PESO")?.path || "";
                     
-                    grid.innerHTML += `
-                        <div class="tag-card border-l-4 border-l-blue-500 shadow-sm hover:shadow-md">
-                            <div>
-                                <div class="flex justify-between items-start">
-                                    <span class="text-[9px] font-black text-blue-600 uppercase">CTe: ${file.nCT}</span>
-                                    <span class="text-[9px] font-bold text-slate-400">#${idx+1}</span>
-                                </div>
-                                <div class="mt-2">
-                                    <p class="text-[10px] text-slate-400 font-bold uppercase">Operação</p>
-                                    <p class="text-sm font-bold text-slate-700">${op}</p>
-                                    <div class="path-display" title="${opPath}" onclick="copyText('${opPath}')">${opPath || 'Caminho não disp.'}</div>
-                                </div>
-                                <div class="mt-2 border-t pt-2">
-                                    <p class="text-[10px] text-slate-400 font-bold uppercase">Frete Peso</p>
-                                    <p class="text-sm font-bold text-slate-700">R$ ${peso}</p>
-                                    <div class="path-display" title="${pesoPath}" onclick="copyText('${pesoPath}')">${pesoPath || 'Caminho não disp.'}</div>
-                                </div>
+                    const div = document.createElement('div');
+                    div.className = "tag-card border-l-4 border-l-blue-500 shadow-sm";
+                    div.innerHTML = `
+                        <div>
+                            <div class="flex justify-between items-start">
+                                <span class="text-[9px] font-black text-blue-600 uppercase">CTe: ${file.nCT}</span>
+                            </div>
+                            <div class="mt-2">
+                                <p class="text-[10px] text-slate-400 font-bold uppercase">Operação</p>
+                                <p class="text-sm font-bold text-slate-700 truncate">${op}</p>
+                            </div>
+                            <div class="mt-2 border-t pt-2">
+                                <p class="text-[10px] text-slate-400 font-bold uppercase">Frete Peso</p>
+                                <p class="text-sm font-bold text-slate-700">R$ ${peso}</p>
                             </div>
                         </div>`;
+                    fragment.appendChild(div);
+                    count++;
+                    if (count > 100) break; // Limite de visualização para tags
                 }
-            });
-        }
-
-        function exportFilteredTags() {
-            const searchVal = document.getElementById('tag-batch-search').value.toLowerCase();
-            const searchTerms = searchVal.split(/[\s,]+/).filter(t => t.length > 0);
-            
-            const filtered = batchData.filter(file => 
-                searchTerms.length === 0 || searchTerms.some(term => file.nCT.toLowerCase().includes(term))
-            );
-
-            if (filtered.length === 0) return alert("Nenhum item filtrado para exportar.");
-            generateCSV(filtered, "relatorio_filtrado.csv");
+            }
+            grid.appendChild(fragment);
         }
 
         function selectFile(index) {
-            if (index < 0 || index >= batchData.length) return;
             selectedIndex = index;
             const file = batchData[index];
             renderBatchList();
-            
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('info-container').classList.remove('hidden');
-            
             document.getElementById('display-rem-nome').innerText = file.results.find(r => r.label === "Rem Nome")?.value || "---";
             document.getElementById('display-rem-cnpj').innerText = "CNPJ: " + (file.results.find(r => r.label === "Rem CNPJ")?.value || "---");
             document.getElementById('display-emi-nome').innerText = file.results.find(r => r.label === "Emi Nome")?.value || "---";
             document.getElementById('display-emi-cnpj').innerText = "CNPJ: " + (file.results.find(r => r.label === "Emi CNPJ")?.value || "---");
         }
 
-        function renderBatchList() {
-            const list = document.getElementById('batch-list');
-            const search = (document.getElementById('search-files')?.value || "").toLowerCase();
-            list.innerHTML = '';
-            batchData.forEach((file, idx) => {
-                if (file.filename.toLowerCase().includes(search) || file.nCT.includes(search)) {
-                    const div = document.createElement('div');
-                    div.className = `file-card ${idx === selectedIndex ? 'selected' : ''}`;
-                    div.onclick = () => selectFile(idx);
-                    div.innerHTML = `
-                        <button class="btn-delete" onclick="deleteFile(${idx}, event)">✕</button>
-                        <p class="text-[11px] font-bold truncate pr-6">${file.filename}</p>
-                        <p class="text-[9px] text-blue-500 font-bold mt-1 uppercase">CTe: ${file.nCT}</p>
-                    `;
-                    list.appendChild(div);
-                }
-            });
-            document.getElementById('status-badge').innerText = `${batchData.length} Arquivos`;
-        }
-
         function deleteFile(index, event) {
             event.stopPropagation();
             batchData.splice(index, 1);
-            if (selectedIndex === index) { selectedIndex = -1; resetDisplay(); }
-            else if (selectedIndex > index) { selectedIndex--; }
-            renderBatchList();
+            if (selectedIndex === index) selectedIndex = -1;
+            debouncedRenderBatchList();
             renderTagsWithFilter();
             updateSidebarVisibility();
-        }
-
-        function resetDisplay() {
-            document.getElementById('empty-state').classList.remove('hidden');
-            document.getElementById('info-container').classList.add('hidden');
         }
 
         function updateSidebarVisibility() {
@@ -463,23 +391,18 @@
             document.getElementById('btn-' + tabId).classList.add('tab-active');
         }
 
-        function generateCSV(data, name) {
-            let csv = "\uFEFFArquivo;CTe;Cobranca;NatOperacao;Caminho_Operacao;CFOP;Veiculo;Origem;Destino;Valor;FretePeso_Valor;Caminho_FretePeso\n";
-            data.forEach(f => {
-                const getVal = (lbl) => f.results.find(r => r.label === lbl)?.value || "N/A";
-                const getPath = (lbl) => f.results.find(r => r.label === lbl)?.path || "";
-                
-                csv += `"${f.filename}";"${f.nCT}";"${getVal('TIPO DE COBRANÇA')}";"${getVal('Tipo de Operação')}";"${getPath('Tipo de Operação')}";"${getVal('CFOP')}";"${getVal('Tipo Veículo')}";"${getVal('Origem')}";"${getVal('Destino')}";"${getVal('VALOR TOTAL')}";"${getVal('FRETE PESO')}";"${getPath('FRETE PESO')}"\n`;
-            });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-            link.download = name; 
-            link.click();
-        }
-
         function exportToCSV() {
             if (batchData.length === 0) return;
-            generateCSV(batchData, "relatorio_completo_forja.csv");
+            let csv = "\uFEFFArquivo;CTe;Remetente;Emitente;Valor;Peso\n";
+            batchData.forEach(f => {
+                const getVal = (lbl) => f.results.find(r => r.label === lbl)?.value || "N/A";
+                csv += `"${f.filename}";"${f.nCT}";"${getVal('Rem Nome')}";"${getVal('Emi Nome')}";"${getVal('VALOR TOTAL')}";"${getVal('FRETE PESO')}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "export_massivo_forja.csv";
+            link.click();
         }
 
         async function exportToZIP() {
@@ -489,14 +412,13 @@
             const content = await zip.generateAsync({ type: "blob" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(content);
-            link.download = "backup_xmls.zip"; 
+            link.download = "backup_xmls.zip";
             link.click();
         }
 
         const fileInput = document.getElementById('file-input');
         document.getElementById('drop-zone').onclick = () => fileInput.click();
         fileInput.onchange = (e) => handleFiles(e.target.files);
-        function copyText(t) { navigator.clipboard.writeText(t); }
     </script>
 </body>
 </html>

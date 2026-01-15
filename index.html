@@ -50,7 +50,6 @@
 
     <!-- Tela de Carregamento com Caminhão -->
     <div id="loading-overlay" class="loading-overlay">
-        <!-- Ícone do Caminhão Pulando (SVG) -->
         <div class="truck-anim mb-4">
             <svg width="120" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M17 17C17 18.1046 16.1046 19 15 19C13.8954 19 13 18.1046 13 17C13 15.8954 13.8954 15 15 15C16.1046 15 17 15.8954 17 17Z" fill="#3b82f6"/>
@@ -83,7 +82,7 @@
             <div onclick="switchTab('tab-gerador')" id="btn-tab-gerador" class="sidebar-item px-5 py-4 flex items-center gap-3 text-sm font-semibold">Exportar</div>
         </nav>
         <div class="p-6 border-t border-slate-800">
-            <p class="text-[10px] text-slate-500 uppercase font-bold">Engine V7.0 • Cloud Sync</p>
+            <p class="text-[10px] text-slate-500 uppercase font-bold">Engine V7.1 • Cloud Sync</p>
         </div>
     </aside>
 
@@ -179,13 +178,14 @@
         let selectedIndex = -1;
         let renderTimeout = null;
 
+        // Configuração de extração com o novo caminho xCaracAd
         const TAGS_TO_FIND = [
             { 
                 id: "TipoVeiculo", 
                 label: "Veículo", 
-                searchNames: ["VEICULO", "TIPOVEICULO", "TIPO VEICULO", "EQUIPAMENTO", "CARRO"],
-                fallbackTags: ["xTipo", "tpVeic", "xTipoVeic"],
-                keywords: ["CARRETA", "TRUCK", "TOCO", "VAN", "BITREM", "VLC", "3/4", "REBOQUE", "FIORINO", "HR"],
+                searchNames: ["VEICULO", "TIPOVEICULO", "TIPO VEICULO", "EQUIPAMENTO", "CARRO", "CATEGORIA"],
+                fallbackTags: ["xTipo", "tpVeic", "xTipoVeic", "xCaracAd"], // xCaracAd adicionado aqui
+                keywords: ["CARRETA", "TRUCK", "TOCO", "VAN", "BITREM", "VLC", "3/4", "REBOQUE", "FIORINO", "HR", "SIDER", "BAU"],
                 color: "blue"
             },
             { 
@@ -204,7 +204,6 @@
             overlay.style.display = 'flex';
             const fileList = Array.from(files);
             
-            // Calculando total de XMLs (incluindo dentro de ZIPs)
             let totalToProcess = 0;
             const tasks = [];
             
@@ -213,12 +212,14 @@
                     totalToProcess++;
                     tasks.push({ name: file.name, content: file.text() });
                 } else if (file.name.toLowerCase().endsWith('.zip')) {
-                    const zip = await JSZip.loadAsync(file);
-                    const zipFiles = Object.keys(zip.files).filter(n => n.endsWith('.xml') && !n.includes('__MACOSX'));
-                    totalToProcess += zipFiles.length;
-                    zipFiles.forEach(zName => {
-                        tasks.push({ name: zName.split('/').pop(), content: zip.files[zName].async("text") });
-                    });
+                    try {
+                        const zip = await JSZip.loadAsync(file);
+                        const zipFiles = Object.keys(zip.files).filter(n => n.endsWith('.xml') && !n.includes('__MACOSX'));
+                        totalToProcess += zipFiles.length;
+                        zipFiles.forEach(zName => {
+                            tasks.push({ name: zName.split('/').pop(), content: zip.files[zName].async("text") });
+                        });
+                    } catch(e) { console.error("Erro ao ler ZIP", e); }
                 }
             }
 
@@ -227,7 +228,6 @@
                 const text = await task.content;
                 processXML(task.name, text);
                 
-                // Atualiza UI de carregamento
                 const pct = Math.round(((i + 1) / totalToProcess) * 100);
                 document.getElementById('loading-stats').innerText = `${i + 1} / ${totalToProcess} (${pct}%)`;
                 document.getElementById('loading-file-name').innerText = task.name;
@@ -259,7 +259,7 @@
             const extractedTags = TAGS_TO_FIND.map(tagRule => {
                 let value = "Não identificado";
 
-                // 1. xCampo
+                // 1. Busca por xCampo (Atributos específicos)
                 for (let el of allElements) {
                     const xCampo = normalize(el.getAttribute("xCampo"));
                     if (xCampo && tagRule.searchNames.some(name => normalize(name) === xCampo)) {
@@ -268,17 +268,22 @@
                         break;
                     }
                 }
-                // 2. Tags Nativas
+
+                // 2. Busca por Tags Nativas (incluindo o novo xCaracAd)
                 if (value === "Não identificado") {
                     for (let el of allElements) {
-                        const tagName = normalize(el.localName || el.nodeName);
-                        if (tagRule.fallbackTags?.some(k => normalize(k) === tagName)) {
-                            value = el.textContent.trim();
-                            break;
+                        const tagName = el.localName || el.nodeName;
+                        if (tagRule.fallbackTags?.some(k => k.toLowerCase() === tagName.toLowerCase())) {
+                            const val = el.textContent.trim();
+                            if(val) {
+                                value = val;
+                                break;
+                            }
                         }
                     }
                 }
-                // 3. Keywords Global Scan
+
+                // 3. Keywords Global Scan (Último recurso)
                 if (value === "Não identificado" && tagRule.keywords) {
                     for (let keyword of tagRule.keywords) {
                         if (rawText.includes(keyword)) {
@@ -304,7 +309,7 @@
             const veicSet = new Set();
             batchData.forEach(item => {
                 const v = item.extractedTags.find(t => t.id === "TipoVeiculo")?.value;
-                if(v && v !== "Não identificado") veicSet.add(v);
+                if(v && v !== "Não identificado") veicSet.add(v.toUpperCase());
             });
             const sel = document.getElementById('filter-veiculo');
             sel.innerHTML = '<option value="ALL">TODOS OS VEÍCULOS</option>';
@@ -318,7 +323,7 @@
             
             const filtered = batchData.filter(item => {
                 const matchSearch = item.nCT.includes(search) || item.chave.includes(search);
-                const valV = item.extractedTags.find(t => t.id === "TipoVeiculo")?.value;
+                const valV = (item.extractedTags.find(t => t.id === "TipoVeiculo")?.value || "").toUpperCase();
                 return matchSearch && (fV === "ALL" || valV === fV);
             });
 
